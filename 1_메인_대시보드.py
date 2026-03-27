@@ -450,7 +450,7 @@ with row1_col1:
                 orientation="v",
                 marker=dict(
                     color=["#3b82f6", "#60a5fa", "#1d4ed8"],
-                    line=dict(color="#2563eb", width=1),
+                    # 방해되는 테두리(line) 삭제!
                 ),
                 hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>",
             )
@@ -484,9 +484,9 @@ with row1_col1:
         ),
     )
 
-    # 둥글게 깎아주는 부분 (숫자 15로 높임!)
+    # 둥글기 강도를 30으로 대폭 상향
     try:
-        fig_time.update_layout(barcornerradius=15)
+        fig_time.update_layout(barcornerradius=30)
     except Exception:
         pass
 
@@ -535,7 +535,7 @@ with row2_col1:
                 orientation="h",
                 marker=dict(
                     color=[get_zone_color(v) for v in zone_data["risk"]],
-                    line=dict(color="#ffffff", width=0.5),
+                    # 방해되는 테두리(line) 삭제!
                 ),
                 width=0.55,
                 hovertemplate="구역: %{y}<br>위험도: %{x}%<extra></extra>",
@@ -565,9 +565,9 @@ with row2_col1:
         ),
     )
 
-    # 둥글게 깎아주는 부분 (숫자 15로 높임!)
+    # 둥글기 강도를 30으로 대폭 상향
     try:
-        fig_zone.update_layout(barcornerradius=15)
+        fig_zone.update_layout(barcornerradius=30)
     except Exception:
         pass
 
