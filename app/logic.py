@@ -41,7 +41,7 @@ def get_weakest_zone(df: pd.DataFrame) -> dict:
 
     return {
         "zone": top_zone["zone"],
-        "count": 0,
+        "count": float(top_zone["risk_score"]),  # <- 프론트엔드가 읽을 수 있게 count에도 비율을 담아줍니다.
         "risk_score": float(top_zone["risk_score"])
     }
 
@@ -128,8 +128,6 @@ def get_zone_risk_scores(df: pd.DataFrame) -> list[dict]:
             "risk_score": risk_score
         })
 
-    results.sort(key=lambda x: x["risk_score"], reverse=True)
-    return results
     results.sort(key=lambda x: x["risk_score"], reverse=True)
     return results
 
