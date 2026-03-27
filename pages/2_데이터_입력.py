@@ -279,7 +279,7 @@ with left:
         normalized_df = normalize_uploaded_df(upload_df)
 
         st.write("업로드 미리보기")
-        st.dataframe(normalized_df.head(10).astype(str), use_container_width=True)
+        st.dataframe(normalized_df.head(10).astype(str).astype(object), use_container_width=True)
 
         if st.button("업로드 데이터 저장", use_container_width=True):
             current_df = load_data()
@@ -341,7 +341,7 @@ with left:
     st.markdown('<div class="section-title">데이터 미리보기</div>', unsafe_allow_html=True)
     st.caption("최근 20건 기준입니다.")
     preview_df = df.tail(20).iloc[::-1] if not df.empty else df
-    st.dataframe(preview_df.astype(str), use_container_width=True)
+    st.dataframe(preview_df.astype(str).astype(object), use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
