@@ -343,19 +343,37 @@ priority_task_text = safe_text(kpi.get("priority_task_text"))
 # 시간대별 차트 데이터
 hourly_df = pd.DataFrame(charts.get("hourly_violations", []))
 if not hourly_df.empty:
-    hourly_df["count"] = pd.to_numeric(hourly_df["count"], errors="coerce").fillna(0)
-    time_order = ["오전", "점심직후", "오후"]
-    hourly_df["time_slot"] = pd.Categorical(hourly_df["time_slot"], categories=time_order, ordered=True)
-    hourly_df = hourly_df.sort_values("time_slot")
+        fig_time.add_trace(
+            go.Bar(
+                # Categorical을 문자열로 바꾼 뒤 리스트로 변환
+                x=hourly_df["time_slot"].astype(str).tolist(),
+                y=hourly_df["count"].tolist(),
+                orientation="v",  # 세로형 막대 명시
+                marker=dict(
+                    color=["#3b82f6", "#60a5fa", "#1d4ed8"],
+                    line=dict(color="#2563eb", width=1),
+                ),
+                hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>",
+            )
+        )
 
 # 구역별 위험도 데이터
 zone_data = pd.DataFrame(charts.get("zone_risk_scores", []))
 if not zone_data.empty:
-    zone_data = zone_data.rename(columns={"risk_score": "risk"})
-    zone_data["risk"] = pd.to_numeric(zone_data["risk"], errors="coerce").fillna(0).round(2)
-    zone_data = zone_data.sort_values("risk", ascending=False).reset_index(drop=True)
-else:
-    zone_data = pd.DataFrame(columns=["zone", "risk"])
+        fig_zone.add_trace(
+            go.Bar(
+                # Pandas Series 대신 순수 리스트로 전달
+                x=zone_data["risk"].tolist(),
+                y=zone_data["zone"].tolist(),
+                orientation="h",
+                marker=dict(
+                    color=[get_zone_color(v) for v in zone_data["risk"]],
+                    line=dict(color="#ffffff", width=0.5),
+                ),
+                width=0.55,
+                hovertemplate="구역: %{y}<br>위험도: %{x}%<extra></extra>",
+            )
+        )
 
 if not safety_points:
     safety_points = ["오늘은 위반 데이터가 없어 전반적으로 양호합니다."]
@@ -469,6 +487,8 @@ with row1_col1:
             title="",
             showgrid=False,
             tickfont=dict(size=12, color="#334155"),
+            categoryorder="array", 
+            categoryarray=["오전", "점심직후", "오후"]  # 순서 강제 고정
         ),
         yaxis=dict(
             title="",
