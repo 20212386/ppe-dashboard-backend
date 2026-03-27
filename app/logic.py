@@ -614,7 +614,7 @@ def get_tbm_full_script(df: pd.DataFrame, target_date: str) -> str:
     )
 
 
- # =========================
+# =========================
 # 페이지 5 개선 / 인센티브 (수정 완료)
 # =========================
 def get_week_label(date_str: str) -> str:
