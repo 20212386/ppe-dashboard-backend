@@ -614,8 +614,8 @@ def get_tbm_full_script(df: pd.DataFrame, target_date: str) -> str:
     )
 
 
-# =========================
-# 페이지 5 개선 / 인센티브
+ # =========================
+# 페이지 5 개선 / 인센티브 (수정 완료)
 # =========================
 def get_week_label(date_str: str) -> str:
     dt = pd.to_datetime(date_str)
@@ -624,15 +624,16 @@ def get_week_label(date_str: str) -> str:
 
 
 def calculate_weekly_compliance(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty:
+    if df.empty or "is_violated" not in df.columns:
         return pd.DataFrame(columns=["week", "compliance_rate"])
 
     temp = df.copy()
     temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
 
+    # 💡 worn == "O" 대신 is_violated == 0 (정상) 사용
     result = (
-        temp.groupby("week_num")["worn"]
-        .apply(lambda x: round((x.eq("O").sum() / len(x)) * 100, 2))
+        temp.groupby("week_num")["is_violated"]
+        .apply(lambda x: round(((x == 0).sum() / len(x)) * 100, 2) if len(x) > 0 else 0)
         .reset_index(name="compliance_rate")
         .sort_values("week_num")
     )
@@ -642,12 +643,14 @@ def calculate_weekly_compliance(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def calculate_weekly_violation_counts(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty:
+    if df.empty or "is_violated" not in df.columns:
         return pd.DataFrame(columns=["week", "violation_count"])
 
     temp = df.copy()
     temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
-    temp["is_violation"] = temp["worn"].eq("X").astype(int)
+    
+    # 💡 worn == "X" 대신 is_violated == 1 (위반) 사용
+    temp["is_violation"] = temp["is_violated"].eq(1).astype(int)
 
     result = (
         temp.groupby("week_num")["is_violation"]
@@ -661,12 +664,14 @@ def calculate_weekly_violation_counts(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def calculate_weekly_ppe_missed_counts(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty:
+    if df.empty or "is_violated" not in df.columns:
         return pd.DataFrame(columns=["week", "ppe_missed_count"])
 
     temp = df.copy()
     temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
-    temp["is_missed"] = temp["worn"].eq("X").astype(int)
+    
+    # 💡 worn == "X" 대신 is_violated == 1 (위반) 사용
+    temp["is_missed"] = temp["is_violated"].eq(1).astype(int)
 
     result = (
         temp.groupby("week_num")["is_missed"]
@@ -680,7 +685,7 @@ def calculate_weekly_ppe_missed_counts(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_team_comparison_chart(df: pd.DataFrame) -> list[dict]:
-    if df.empty or "team" not in df.columns:
+    if df.empty or "team" not in df.columns or "is_violated" not in df.columns:
         return []
 
     temp = df.copy()
@@ -705,8 +710,9 @@ def get_team_comparison_chart(df: pd.DataFrame) -> list[dict]:
         if len(first_df) == 0 or len(last_df) == 0:
             continue
 
-        first_rate = round((first_df["worn"].eq("O").sum() / len(first_df)) * 100, 2)
-        last_rate = round((last_df["worn"].eq("O").sum() / len(last_df)) * 100, 2)
+        # 💡 worn == "O" 대신 is_violated == 0 (정상) 비율 계산
+        first_rate = round(((first_df["is_violated"] == 0).sum() / len(first_df)) * 100, 2)
+        last_rate = round(((last_df["is_violated"] == 0).sum() / len(last_df)) * 100, 2)
 
         result.append({
             "team": team,
@@ -718,7 +724,7 @@ def get_team_comparison_chart(df: pd.DataFrame) -> list[dict]:
 
 
 def get_team_incentive_summary(df: pd.DataFrame) -> list[str]:
-    if df.empty or "team" not in df.columns:
+    if df.empty or "team" not in df.columns or "is_violated" not in df.columns:
         return ["팀 데이터가 없습니다."]
 
     temp = df.copy()
@@ -743,11 +749,12 @@ def get_team_incentive_summary(df: pd.DataFrame) -> list[str]:
         if len(first_df) == 0 or len(last_df) == 0:
             continue
 
-        first_rate = round((first_df["worn"].eq("O").sum() / len(first_df)) * 100, 2)
-        last_rate = round((last_df["worn"].eq("O").sum() / len(last_df)) * 100, 2)
+        # 💡 worn == "O", "X" 대신 is_violated == 0, 1 적용
+        first_rate = round(((first_df["is_violated"] == 0).sum() / len(first_df)) * 100, 2)
+        last_rate = round(((last_df["is_violated"] == 0).sum() / len(last_df)) * 100, 2)
 
-        first_missed = int(first_df["worn"].eq("X").sum())
-        last_missed = int(last_df["worn"].eq("X").sum())
+        first_missed = int((first_df["is_violated"] == 1).sum())
+        last_missed = int((last_df["is_violated"] == 1).sum())
 
         reduction = round(((first_missed - last_missed) / first_missed) * 100, 2) if first_missed > 0 else 0.0
 
