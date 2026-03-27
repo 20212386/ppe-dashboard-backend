@@ -70,8 +70,8 @@ def health():
 def test_summary():
     df = load_logs(DATA_FILE_PATH)
 
-    compliance_rate = calculate_compliance_rate(df)
-    weakest_zone = get_weakest_zone(df)
+    compliance_rate = calculate_compliance_rate(filtered_df)
+    weakest_zone = get_weakest_zone(filtered_df)
     most_missing_ppe = get_most_missing_ppe(df)
     priority_task = get_priority_task(df)
 

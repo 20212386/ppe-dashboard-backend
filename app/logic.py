@@ -32,16 +32,18 @@ def calculate_compliance_rate(df: pd.DataFrame) -> float:
 
 
 def get_weakest_zone(df: pd.DataFrame) -> dict:
-    violated_df = df[df["is_violated"] == 1]
+    zone_risk_scores = get_zone_risk_scores(df)
 
-    if violated_df.empty:
-        return {"zone": None, "count": 0}
+    if not zone_risk_scores:
+        return {"zone": None, "count": 0, "risk_score": 0.0}
 
-    zone_counts = violated_df["zone"].value_counts()
-    weakest_zone = zone_counts.idxmax()
-    count = int(zone_counts.max())
+    top_zone = zone_risk_scores[0]
 
-    return {"zone": weakest_zone, "count": count}
+    return {
+        "zone": top_zone["zone"],
+        "count": 0,
+        "risk_score": float(top_zone["risk_score"])
+    }
 
 
 def get_most_missing_ppe(df: pd.DataFrame) -> dict:
