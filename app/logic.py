@@ -615,210 +615,141 @@ def get_tbm_full_script(df: pd.DataFrame, target_date: str) -> str:
 
 
 # =========================
-# 페이지 5 개선 / 인센티브 (수정 완료)
+# 페이지 5 개선 / 인센티브 (함수 구조 복구 및 타입 에러 완벽 해결)
 # =========================
+import pandas as pd
+
 def get_week_label(date_str: str) -> str:
     dt = pd.to_datetime(date_str)
     week_num = int(dt.isocalendar().week)
     return f"{week_num}주차"
 
-
 def calculate_weekly_compliance(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "is_violated" not in df.columns:
         return pd.DataFrame(columns=["week", "compliance_rate"])
-
     temp = df.copy()
     temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
-
-    # 💡 worn == "O" 대신 is_violated == 0 (정상) 사용
+    # 💡 문자열이든 뭐든 숫자로 바꿔서 0(정상)인지 확인
+    temp["is_normal"] = pd.to_numeric(temp["is_violated"], errors="coerce").fillna(0) == 0
     result = (
-        temp.groupby("week_num")["is_violated"]
-        .apply(lambda x: round(((x == 0).sum() / len(x)) * 100, 2) if len(x) > 0 else 0)
+        temp.groupby("week_num")["is_normal"]
+        .apply(lambda x: round((x.sum() / len(x)) * 100, 2) if len(x) > 0 else 0.0)
         .reset_index(name="compliance_rate")
         .sort_values("week_num")
     )
-
     result["week"] = result["week_num"].astype(str) + "주차"
     return result[["week", "compliance_rate"]]
-
 
 def calculate_weekly_violation_counts(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "is_violated" not in df.columns:
         return pd.DataFrame(columns=["week", "violation_count"])
-
     temp = df.copy()
     temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
-    
-    # 💡 worn == "X" 대신 is_violated == 1 (위반) 사용
-    temp["is_violation"] = temp["is_violated"].eq(1).astype(int)
-
+    # 💡 숫자로 바꿔서 1(위반)인지 확인
+    temp["is_violation"] = (pd.to_numeric(temp["is_violated"], errors="coerce").fillna(0) == 1).astype(int)
     result = (
         temp.groupby("week_num")["is_violation"]
         .sum()
         .reset_index(name="violation_count")
         .sort_values("week_num")
     )
-
     result["week"] = result["week_num"].astype(str) + "주차"
     return result[["week", "violation_count"]]
-
 
 def calculate_weekly_ppe_missed_counts(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "is_violated" not in df.columns:
         return pd.DataFrame(columns=["week", "ppe_missed_count"])
-
     temp = df.copy()
     temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
-    
-    # 💡 worn == "X" 대신 is_violated == 1 (위반) 사용
-    temp["is_missed"] = temp["is_violated"].eq(1).astype(int)
-
+    temp["is_missed"] = (pd.to_numeric(temp["is_violated"], errors="coerce").fillna(0) == 1).astype(int)
     result = (
         temp.groupby("week_num")["is_missed"]
         .sum()
         .reset_index(name="ppe_missed_count")
         .sort_values("week_num")
     )
-
     result["week"] = result["week_num"].astype(str) + "주차"
     return result[["week", "ppe_missed_count"]]
-
 
 def get_team_comparison_chart(df: pd.DataFrame) -> list[dict]:
     if df.empty or "team" not in df.columns or "is_violated" not in df.columns:
         return []
-
     temp = df.copy()
     temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
+    temp["is_normal"] = pd.to_numeric(temp["is_violated"], errors="coerce").fillna(0) == 0
 
     weeks = sorted(temp["week_num"].dropna().unique().tolist())
-    if len(weeks) < 2:
-        return []
-
-    first_week = weeks[0]
-    last_week = weeks[-1]
-
+    if len(weeks) < 2: return []
+    first_week, last_week = weeks[0], weeks[-1]
+    
     result = []
-    teams = temp["team"].dropna().unique().tolist()
-
-    for team in teams:
+    for team in temp["team"].dropna().unique().tolist():
         team_df = temp[temp["team"] == team]
-
         first_df = team_df[team_df["week_num"] == first_week]
         last_df = team_df[team_df["week_num"] == last_week]
-
-        if len(first_df) == 0 or len(last_df) == 0:
-            continue
-
-        # 💡 worn == "O" 대신 is_violated == 0 (정상) 비율 계산
-        first_rate = round(((first_df["is_violated"] == 0).sum() / len(first_df)) * 100, 2)
-        last_rate = round(((last_df["is_violated"] == 0).sum() / len(last_df)) * 100, 2)
-
-        result.append({
-            "team": team,
-            "initial_rate": first_rate,
-            "current_rate": last_rate
-        })
-
+        if len(first_df) == 0 or len(last_df) == 0: continue
+        
+        first_rate = round((first_df["is_normal"].sum() / len(first_df)) * 100, 2)
+        last_rate = round((last_df["is_normal"].sum() / len(last_df)) * 100, 2)
+        result.append({"team": team, "initial_rate": first_rate, "current_rate": last_rate})
     return result
 
-
 def get_team_incentive_summary(df: pd.DataFrame) -> list[str]:
-    if df.empty or "team" not in df.columns or "is_violated" not in df.columns:
-        return ["팀 데이터가 없습니다."]
-
+    if df.empty or "team" not in df.columns: return ["팀 데이터가 없습니다."]
     temp = df.copy()
     temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
+    temp["is_normal"] = pd.to_numeric(temp["is_violated"], errors="coerce").fillna(0) == 0
+    temp["is_violation"] = pd.to_numeric(temp["is_violated"], errors="coerce").fillna(0) == 1
 
     weeks = sorted(temp["week_num"].dropna().unique().tolist())
-    if len(weeks) < 2:
-        return ["주간 비교를 위한 데이터가 부족합니다."]
-
-    first_week = weeks[0]
-    last_week = weeks[-1]
-
+    if len(weeks) < 2: return ["주간 비교를 위한 데이터가 부족합니다."]
+    first_week, last_week = weeks[0], weeks[-1]
+    
     summaries = []
-    teams = temp["team"].dropna().unique().tolist()
-
-    for team in teams:
+    for team in temp["team"].dropna().unique().tolist():
         team_df = temp[temp["team"] == team]
-
         first_df = team_df[team_df["week_num"] == first_week]
         last_df = team_df[team_df["week_num"] == last_week]
-
-        if len(first_df) == 0 or len(last_df) == 0:
-            continue
-
-        # 💡 worn == "O", "X" 대신 is_violated == 0, 1 적용
-        first_rate = round(((first_df["is_violated"] == 0).sum() / len(first_df)) * 100, 2)
-        last_rate = round(((last_df["is_violated"] == 0).sum() / len(last_df)) * 100, 2)
-
-        first_missed = int((first_df["is_violated"] == 1).sum())
-        last_missed = int((last_df["is_violated"] == 1).sum())
-
+        if len(first_df) == 0 or len(last_df) == 0: continue
+        
+        first_rate = round((first_df["is_normal"].sum() / len(first_df)) * 100, 2)
+        last_rate = round((last_df["is_normal"].sum() / len(last_df)) * 100, 2)
+        first_missed = int(first_df["is_violation"].sum())
+        last_missed = int(last_df["is_violation"].sum())
         reduction = round(((first_missed - last_missed) / first_missed) * 100, 2) if first_missed > 0 else 0.0
-
-        summaries.append(
-            f"{team}: 초기 준수율 {first_rate}% → 현재 {last_rate}%, PPE 미착용 {reduction}% 감소"
-        )
-
+        summaries.append(f"{team}: 초기 준수율 {first_rate}% → 현재 {last_rate}%, PPE 미착용 {reduction}% 감소")
     return summaries if summaries else ["팀별 비교 데이터가 부족합니다."]
-
 
 def get_improvement_metrics(df: pd.DataFrame) -> dict:
     weekly_compliance = calculate_weekly_compliance(df)
     weekly_violations = calculate_weekly_violation_counts(df)
     weekly_ppe = calculate_weekly_ppe_missed_counts(df)
-
     best_team = "-"
-
     if "team" in df.columns and not df.empty:
         team_chart = get_team_comparison_chart(df)
         if team_chart:
             best_item = max(team_chart, key=lambda x: x["current_rate"] - x["initial_rate"])
             best_team = best_item["team"]
-
     if len(weekly_compliance) < 2:
-        return {
-            "improvement_rate": 0.0,
-            "repeat_ppe_reduction_rate": 0.0,
-            "risk_recurrence_reduction_rate": 0.0,
-            "best_team": best_team,
-        }
-
+        return {"improvement_rate": 0.0, "repeat_ppe_reduction_rate": 0.0, "risk_recurrence_reduction_rate": 0.0, "best_team": best_team}
+    
     first_compliance = float(weekly_compliance.iloc[0]["compliance_rate"])
     last_compliance = float(weekly_compliance.iloc[-1]["compliance_rate"])
     improvement_rate = round(last_compliance - first_compliance, 2)
-
+    
     first_ppe = int(weekly_ppe.iloc[0]["ppe_missed_count"]) if not weekly_ppe.empty else 0
     last_ppe = int(weekly_ppe.iloc[-1]["ppe_missed_count"]) if not weekly_ppe.empty else 0
     repeat_ppe_reduction_rate = round(((first_ppe - last_ppe) / first_ppe) * 100, 2) if first_ppe > 0 else 0.0
-
+    
     first_violation = int(weekly_violations.iloc[0]["violation_count"]) if not weekly_violations.empty else 0
     last_violation = int(weekly_violations.iloc[-1]["violation_count"]) if not weekly_violations.empty else 0
     risk_recurrence_reduction_rate = round(((first_violation - last_violation) / first_violation) * 100, 2) if first_violation > 0 else 0.0
-
-    return {
-        "improvement_rate": improvement_rate,
-        "repeat_ppe_reduction_rate": repeat_ppe_reduction_rate,
-        "risk_recurrence_reduction_rate": risk_recurrence_reduction_rate,
-        "best_team": best_team,
-    }
-
+    
+    return {"improvement_rate": improvement_rate, "repeat_ppe_reduction_rate": repeat_ppe_reduction_rate, "risk_recurrence_reduction_rate": risk_recurrence_reduction_rate, "best_team": best_team}
 
 def get_weekly_trend_charts(df: pd.DataFrame) -> dict:
     weekly_violations = calculate_weekly_violation_counts(df)
     weekly_ppe = calculate_weekly_ppe_missed_counts(df)
-
-    violation_chart = weekly_violations.rename(
-        columns={"week": "label", "violation_count": "count"}
-    ).to_dict(orient="records")
-
-    ppe_chart = weekly_ppe.rename(
-        columns={"week": "label", "ppe_missed_count": "count"}
-    ).to_dict(orient="records")
-
-    return {
-        "violation_trend_chart": violation_chart,
-        "ppe_trend_chart": ppe_chart,
-    }
+    violation_chart = weekly_violations.rename(columns={"week": "label", "violation_count": "count"}).to_dict(orient="records")
+    ppe_chart = weekly_ppe.rename(columns={"week": "label", "ppe_missed_count": "count"}).to_dict(orient="records")
+    return {"violation_trend_chart": violation_chart, "ppe_trend_chart": ppe_chart}
