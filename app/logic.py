@@ -615,27 +615,24 @@ def get_tbm_full_script(df: pd.DataFrame, target_date: str) -> str:
 
 
 # =========================
-# 페이지 5 개선 / 인센티브 (초강력 에러 방어 버전)
+# =========================
+# 페이지 5 개선 / 인센티브 (초강력 에러 방어 + 완벽 계산 버전)
 # =========================
 import pandas as pd
 
 def get_violation_series(df: pd.DataFrame) -> pd.Series:
-    """어떤 거지같은 데이터가 들어와도 위반 여부를 기필코 찾아내는 마법의 함수"""
-    # 1. is_violated 컬럼이 정상적으로 있는 경우
+    """어떤 데이터가 들어와도 위반 여부를 찾아내는 함수"""
     if "is_violated" in df.columns:
         v = pd.to_numeric(df["is_violated"], errors="coerce").fillna(0)
         if v.sum() > 0: return v == 1
     
-    # 2. is_violated가 비어있더라도 missed_ppe에 보호구 이름이 적혀있으면 위반!
     if "missed_ppe" in df.columns:
         m = df["missed_ppe"].astype(str).str.strip().replace(["nan", "None", "NaN"], "")
         if (m != "").sum() > 0: return m != ""
     
-    # 3. 그것마저 비어있어도 note 컬럼에 "미흡"이라는 단어가 있으면 무조건 위반!
     if "note" in df.columns:
         return df["note"].astype(str).str.contains("미흡")
     
-    # 4. 아주 옛날 형식(worn) 호환
     if "worn" in df.columns:
         return df["worn"].astype(str).str.strip().str.upper() == "X"
     
@@ -644,7 +641,7 @@ def get_violation_series(df: pd.DataFrame) -> pd.Series:
 def calculate_weekly_compliance(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty: return pd.DataFrame(columns=["week", "compliance_rate"])
     temp = df.copy()
-    temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
+    temp["week_num"] = pd.to_datetime(temp["date"], errors='coerce').dt.isocalendar().week.astype(int)
     temp["is_violation"] = get_violation_series(temp)
     temp["is_normal"] = ~temp["is_violation"]
     
@@ -660,7 +657,7 @@ def calculate_weekly_compliance(df: pd.DataFrame) -> pd.DataFrame:
 def calculate_weekly_violation_counts(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty: return pd.DataFrame(columns=["week", "violation_count"])
     temp = df.copy()
-    temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
+    temp["week_num"] = pd.to_datetime(temp["date"], errors='coerce').dt.isocalendar().week.astype(int)
     temp["is_violation"] = get_violation_series(temp).astype(int)
     
     result = temp.groupby("week_num")["is_violation"].sum().reset_index(name="violation_count").sort_values("week_num")
@@ -673,14 +670,14 @@ def calculate_weekly_ppe_missed_counts(df: pd.DataFrame) -> pd.DataFrame:
 def get_team_comparison_chart(df: pd.DataFrame) -> list[dict]:
     if df.empty or "team" not in df.columns: return []
     temp = df.copy()
-    temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
+    temp["week_num"] = pd.to_datetime(temp["date"], errors='coerce').dt.isocalendar().week.astype(int)
     temp["is_normal"] = ~get_violation_series(temp)
 
     result = []
     for team in temp["team"].dropna().unique():
         t_df = temp[temp["team"] == team]
         t_weeks = sorted(t_df["week_num"].unique())
-        if len(t_weeks) < 2: continue # 💡 팀별로 데이터가 듬성듬성 있어도 알아서 첫 주/마지막 주 찾아냄!
+        if len(t_weeks) < 2: continue
         
         first_df = t_df[t_df["week_num"] == t_weeks[0]]
         last_df = t_df[t_df["week_num"] == t_weeks[-1]]
@@ -693,7 +690,7 @@ def get_team_comparison_chart(df: pd.DataFrame) -> list[dict]:
 def get_team_incentive_summary(df: pd.DataFrame) -> list[str]:
     if df.empty or "team" not in df.columns: return ["팀 데이터가 없습니다."]
     temp = df.copy()
-    temp["week_num"] = pd.to_datetime(temp["date"]).dt.isocalendar().week.astype(int)
+    temp["week_num"] = pd.to_datetime(temp["date"], errors='coerce').dt.isocalendar().week.astype(int)
     temp["is_violation"] = get_violation_series(temp)
     temp["is_normal"] = ~temp["is_violation"]
 
