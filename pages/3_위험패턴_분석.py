@@ -10,13 +10,11 @@ st.set_page_config(
 
 API_BASE_URL = "https://ppe-dashboard-backend.onrender.com"
 
-
 # =========================
 # 상태
 # =========================
 if "p3_analysis_data" not in st.session_state:
     st.session_state["p3_analysis_data"] = None
-
 
 # =========================
 # API
@@ -31,7 +29,6 @@ def fetch_analysis_data(params: dict):
         st.error(f"분석 데이터 조회 실패: {e}")
         return None
 
-
 # =========================
 # 스타일
 # =========================
@@ -42,7 +39,6 @@ st.markdown("""
     padding-bottom: 2rem;
     max-width: 1480px;
 }
-
 .main-title {
     font-size: 2.15rem;
     font-weight: 800;
@@ -50,13 +46,11 @@ st.markdown("""
     margin-bottom: 0.25rem;
     letter-spacing: -0.03em;
 }
-
 .sub-title {
     color: #64748b;
     font-size: 1rem;
     margin-bottom: 1.1rem;
 }
-
 .filter-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -65,7 +59,6 @@ st.markdown("""
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
     margin-bottom: 1rem;
 }
-
 .section-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -74,20 +67,17 @@ st.markdown("""
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
     margin-bottom: 1rem;
 }
-
 .section-title {
     font-size: 1.12rem;
     font-weight: 800;
     color: #0f172a;
     margin-bottom: 0.4rem;
 }
-
 .section-sub {
     color: #64748b;
     font-size: 0.86rem;
     margin-bottom: 0.95rem;
 }
-
 .metric-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -96,21 +86,18 @@ st.markdown("""
     min-height: 138px;
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
 }
-
 .metric-top {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
 }
-
 .metric-label {
     color: #64748b;
     font-size: 0.9rem;
     margin-bottom: 10px;
     font-weight: 700;
 }
-
 .metric-value {
     color: #0f172a;
     font-size: 1.55rem;
@@ -120,7 +107,6 @@ st.markdown("""
     letter-spacing: -0.02em;
     word-break: keep-all;
 }
-
 .metric-badge {
     display: inline-block;
     padding: 6px 11px;
@@ -128,7 +114,6 @@ st.markdown("""
     font-size: 0.75rem;
     font-weight: 800;
 }
-
 .metric-icon {
     width: 50px;
     height: 50px;
@@ -139,7 +124,6 @@ st.markdown("""
     font-size: 1.25rem;
     flex-shrink: 0;
 }
-
 .insight-box {
     border-radius: 14px;
     padding: 11px 13px;
@@ -148,7 +132,6 @@ st.markdown("""
     line-height: 1.55;
     border: 1px solid;
 }
-
 .recommend-box {
     background: linear-gradient(135deg, #eef4ff 0%, #dbeafe 100%);
     border: 1px solid #bfdbfe;
@@ -159,7 +142,6 @@ st.markdown("""
     line-height: 1.7;
     font-weight: 700;
 }
-
 .analysis-guide {
     background: #f8fafc;
     border: 1px dashed #cbd5e1;
@@ -169,21 +151,23 @@ st.markdown("""
     font-size: 0.92rem;
     line-height: 1.7;
 }
-
 .small-stat {
     color: #64748b;
     font-size: 0.9rem;
     margin: 0.2rem 0 0.9rem 0;
 }
-
 .stButton > button {
     border-radius: 14px;
     font-weight: 800;
     min-height: 46px;
 }
+div[data-testid="stDownloadButton"] > button {
+    border-radius: 14px;
+    font-weight: 800;
+    min-height: 44px;
+}
 </style>
 """, unsafe_allow_html=True)
-
 
 # =========================
 # 렌더 함수
@@ -214,7 +198,6 @@ def render_empty_chart_message(message: str):
         """,
         unsafe_allow_html=True
     )
-
 
 # =========================
 # 헤더
@@ -352,8 +335,11 @@ with r1c1:
                     x=time_df["label"].astype(str).tolist(),
                     y=time_df["count"].tolist(),
                     orientation="v",
-                    width=0.35, # 뚱뚱이 방지 (슬림하게!)
-                    marker=dict(color="#3b82f6"),
+                    width=0.45,
+                    marker=dict(
+                        color="rgba(59, 130, 246, 0.65)", # 💡 반투명한 파란색
+                        line=dict(color="rgba(37, 99, 235, 1.0)", width=1.5) # 💡 진한 파란색 테두리
+                    ),
                     hovertemplate="%{x}: %{y}건<extra></extra>"
                 )
             )
@@ -361,12 +347,10 @@ with r1c1:
         fig_time.update_layout(
             height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
-            showlegend=False, bargap=0.6,
+            showlegend=False,
             xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
             yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
         )
-        try: fig_time.update_layout(barcornerradius=15) # 동글동글 라운드 처리
-        except Exception: pass
         st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
         
         st.markdown(f'<div class="insight-box" style="background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a;">💡 패턴 해석: 가장 위반이 집중된 시간대는 <b>{top_time}</b>입니다.</div>', unsafe_allow_html=True)
@@ -384,15 +368,29 @@ with r1c2:
     else:
         fig_ppe = go.Figure()
         if not ppe_df.empty:
-            ppe_color_map = {"장갑": "#f59e0b", "안전모": "#3b82f6", "랜야드": "#8b5cf6"}
-            ppe_colors = [ppe_color_map.get(label, "#94a3b8") for label in ppe_df["label"].astype(str)]
+            ppe_color_map = {
+                "장갑": "rgba(245, 158, 11, 0.65)",
+                "안전모": "rgba(59, 130, 246, 0.65)",
+                "랜야드": "rgba(139, 92, 246, 0.65)"
+            }
+            ppe_line_map = {
+                "장갑": "rgba(217, 119, 6, 1.0)",
+                "안전모": "rgba(37, 99, 235, 1.0)",
+                "랜야드": "rgba(109, 40, 217, 1.0)"
+            }
+            ppe_colors = [ppe_color_map.get(label, "rgba(148, 163, 184, 0.65)") for label in ppe_df["label"].astype(str)]
+            ppe_lines = [ppe_line_map.get(label, "rgba(71, 85, 105, 1.0)") for label in ppe_df["label"].astype(str)]
+
             fig_ppe.add_trace(
                 go.Bar(
                     x=ppe_df["label"].astype(str).tolist(),
                     y=ppe_df["count"].tolist(),
                     orientation="v",
-                    width=0.35, # 뚱뚱이 방지
-                    marker=dict(color=ppe_colors),
+                    width=0.45,
+                    marker=dict(
+                        color=ppe_colors,
+                        line=dict(color=ppe_lines, width=1.5) # 💡 여기도 반투명 + 테두리 적용!
+                    ),
                     hovertemplate="%{x}: %{y}건<extra></extra>"
                 )
             )
@@ -400,12 +398,10 @@ with r1c2:
         fig_ppe.update_layout(
             height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
-            showlegend=False, bargap=0.6,
+            showlegend=False,
             xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
             yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
         )
-        try: fig_ppe.update_layout(barcornerradius=15)
-        except Exception: pass
         st.plotly_chart(fig_ppe, use_container_width=True, config={"displayModeBar": False})
         
         st.markdown(f'<div class="insight-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">💡 패턴 해석: 가장 많이 누락되는 보호구는 <b>{top_ppe}</b>입니다.</div>', unsafe_allow_html=True)
@@ -428,14 +424,18 @@ with r2c1:
     else:
         fig_zone = go.Figure()
         if not zone_df.empty:
-            zone_colors = ["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"][:len(zone_df)]
+            zone_colors = ["rgba(59, 130, 246, 0.65)", "rgba(96, 165, 250, 0.65)", "rgba(147, 197, 253, 0.65)", "rgba(191, 219, 254, 0.65)"][:len(zone_df)]
+            zone_lines = ["rgba(29, 78, 216, 1.0)", "rgba(37, 99, 235, 1.0)", "rgba(59, 130, 246, 1.0)", "rgba(96, 165, 250, 1.0)"][:len(zone_df)]
             fig_zone.add_trace(
                 go.Bar(
                     x=zone_df["count"].tolist(),             
                     y=zone_df["label"].astype(str).tolist(), 
                     orientation="h",
-                    width=0.35, # 뚱뚱이 방지
-                    marker=dict(color=zone_colors),
+                    width=0.45,
+                    marker=dict(
+                        color=zone_colors,
+                        line=dict(color=zone_lines, width=1.5)
+                    ),
                     hovertemplate="%{y}: %{x}건<extra></extra>"
                 )
             )
@@ -443,12 +443,10 @@ with r2c1:
         fig_zone.update_layout(
             height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
-            showlegend=False, bargap=0.6,
+            showlegend=False,
             xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8")),
             yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#334155"))
         )
-        try: fig_zone.update_layout(barcornerradius=15)
-        except Exception: pass
         st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
         
         st.markdown(f'<div class="insight-box" style="background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a;">💡 패턴 해석: 가장 취약한 구역은 <b>{top_zone}</b>입니다.</div>', unsafe_allow_html=True)
@@ -471,8 +469,11 @@ with r2c2:
                     x=task_df["count"].tolist(),             
                     y=task_df["label"].astype(str).tolist(), 
                     orientation="h",
-                    width=0.35, # 뚱뚱이 방지
-                    marker=dict(color="#8b5cf6"),
+                    width=0.45,
+                    marker=dict(
+                        color="rgba(139, 92, 246, 0.65)",
+                        line=dict(color="rgba(109, 40, 217, 1.0)", width=1.5)
+                    ),
                     hovertemplate="%{y}: %{x}건<extra></extra>"
                 )
             )
@@ -480,12 +481,10 @@ with r2c2:
         fig_task.update_layout(
             height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
-            showlegend=False, bargap=0.6,
+            showlegend=False,
             xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8")),
             yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#334155"))
         )
-        try: fig_task.update_layout(barcornerradius=15)
-        except Exception: pass
         st.plotly_chart(fig_task, use_container_width=True, config={"displayModeBar": False})
         
         st.markdown(f'<div class="insight-box" style="background:#faf5ff; border-color:#e9d5ff; color:#6b21a8;">💡 패턴 해석: 반복 개입 우선 작업은 <b>{top_task}</b>입니다.</div>', unsafe_allow_html=True)
