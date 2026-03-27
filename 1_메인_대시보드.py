@@ -37,6 +37,15 @@ def fetch_dashboard_data(target_date: str, site: str):
 # =========================
 # 유틸
 # =========================
+def safe_text(value, default="-"):
+    if value is None:
+        return default
+    text = str(value).strip()
+    if text == "" or text.lower() in ["none", "nan", "null"]:
+        return default
+    return text
+
+
 def get_zone_color(value: float) -> str:
     if value >= 70:
         return "#ef4444"
@@ -45,32 +54,21 @@ def get_zone_color(value: float) -> str:
     return "#22c55e"
 
 
-def safe_text(value, default="-"):
-    if value is None:
-        return default
-    text = str(value).strip()
-    if text == "" or text.lower() == "none" or text.lower() == "nan":
-        return default
-    return text
-
-
 def build_ai_summary(report_date, weakest_zone_name, weakest_zone_score, most_missing_ppe_name, priority_task_text):
-    items = []
-
     weakest_zone_name = safe_text(weakest_zone_name)
     most_missing_ppe_name = safe_text(most_missing_ppe_name)
     priority_task_text = safe_text(priority_task_text)
+
+    items = []
 
     if weakest_zone_name != "-":
         items.append(
             f"{report_date} 기준 가장 취약한 구역은 {weakest_zone_name}이며 해당 구역 내 위반비율은 {weakest_zone_score}%입니다."
         )
-
     if most_missing_ppe_name != "-":
         items.append(
             f"반복 누락 PPE는 {most_missing_ppe_name}입니다. 해당 보호구 착용 확인을 우선 강화해야 합니다."
         )
-
     if priority_task_text != "-":
         items.append(
             f"우선 개입 필요 작업은 {priority_task_text}입니다."
@@ -107,62 +105,54 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1.7rem;
         padding-bottom: 2rem;
-        max-width: 1480px;
+        max-width: 1500px;
     }
 
     .main-title {
-        font-size: 2.3rem;
+        font-size: 2.15rem;
         font-weight: 800;
         color: #0f172a;
         line-height: 1.2;
         letter-spacing: -0.02em;
-        margin-bottom: 0.35rem;
+        margin-bottom: 0.25rem;
     }
 
     .main-subtitle {
-        font-size: 1.02rem;
+        font-size: 0.98rem;
         color: #64748b;
-        margin-bottom: 1.25rem;
-    }
-
-    .panel-title {
-        font-size: 1.55rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-bottom: 0.8rem;
-        letter-spacing: -0.02em;
+        margin-bottom: 1.1rem;
     }
 
     .section-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 24px;
-        padding: 22px;
+        border-radius: 22px;
+        padding: 20px;
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
         margin-bottom: 1rem;
     }
 
     .section-title {
-        font-size: 1.2rem;
+        font-size: 1.16rem;
         font-weight: 800;
         color: #0f172a;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.25rem;
     }
 
     .section-sub {
         color: #64748b;
-        font-size: 0.9rem;
-        margin-bottom: 0.9rem;
+        font-size: 0.88rem;
+        margin-bottom: 0.8rem;
     }
 
     .metric-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 22px;
-        padding: 20px 22px;
-        min-height: 170px;
+        border-radius: 20px;
+        padding: 18px 18px;
+        min-height: 158px;
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
     }
 
@@ -170,7 +160,7 @@ st.markdown(
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        gap: 14px;
+        gap: 10px;
     }
 
     .metric-left {
@@ -180,52 +170,53 @@ st.markdown(
 
     .metric-title {
         color: #64748b;
-        font-size: 0.98rem;
+        font-size: 0.92rem;
         font-weight: 700;
         margin-bottom: 10px;
-        line-height: 1.5;
+        line-height: 1.45;
         word-break: keep-all;
     }
 
     .metric-value {
         color: #0f172a;
-        font-size: 1.9rem;
+        font-size: 1.72rem;
         font-weight: 800;
         line-height: 1.18;
         letter-spacing: -0.02em;
         margin-bottom: 10px;
-        white-space: normal;
         word-break: keep-all;
+        white-space: normal;
     }
 
     .metric-badge {
         display: inline-block;
-        padding: 7px 12px;
+        padding: 7px 11px;
         border-radius: 999px;
-        font-size: 0.78rem;
+        font-size: 0.76rem;
         font-weight: 800;
     }
 
     .metric-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 16px;
+        width: 52px;
+        height: 52px;
+        border-radius: 15px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.4rem;
+        font-size: 1.28rem;
         flex-shrink: 0;
     }
 
     .info-box {
-        border-radius: 16px;
-        padding: 15px 16px;
+        border-radius: 15px;
+        padding: 14px 15px;
         border: 1px solid #fecaca;
         background: #fff1f2;
         color: #b91c1c;
         line-height: 1.65;
-        font-size: 0.97rem;
+        font-size: 0.93rem;
         font-weight: 600;
+        margin-bottom: 0.7rem;
     }
 
     .sub-box {
@@ -237,67 +228,58 @@ st.markdown(
     .sub-box-title {
         font-weight: 800;
         color: #475569;
-        margin-bottom: 0.6rem;
-        font-size: 1rem;
+        margin-bottom: 0.55rem;
+        font-size: 0.98rem;
     }
 
     .ai-title-row {
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 0.35rem;
+        margin-bottom: 0.25rem;
     }
 
     .ai-emoji {
-        font-size: 1.35rem;
+        font-size: 1.25rem;
         line-height: 1;
     }
 
     .ai-title {
-        font-size: 1.1rem;
+        font-size: 1.08rem;
         font-weight: 800;
         color: #0f172a;
     }
 
     .ai-sub {
         color: #64748b;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         margin-bottom: 0.8rem;
     }
 
     .ai-list {
         margin: 0;
-        padding-left: 1.1rem;
+        padding-left: 1rem;
     }
 
     .ai-list li {
-        margin-bottom: 0.7rem;
+        margin-bottom: 0.6rem;
         color: #334155;
-        line-height: 1.75;
-        font-size: 0.97rem;
+        line-height: 1.7;
+        font-size: 0.94rem;
         word-break: keep-all;
     }
 
     .ai-updated {
         color: #6b7280;
-        font-size: 0.86rem;
+        font-size: 0.84rem;
         font-weight: 600;
-        margin-top: 0.8rem;
-    }
-
-    .filter-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 24px;
-        padding: 18px 20px;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
-        margin-bottom: 1rem;
+        margin-top: 0.75rem;
     }
 
     .caption-note {
         color: #64748b;
-        font-size: 0.9rem;
-        margin-top: 0.35rem;
+        font-size: 0.88rem;
+        margin-top: 0.3rem;
     }
 
     .stButton > button {
@@ -329,9 +311,7 @@ st.markdown(
 # =========================
 # 필터
 # =========================
-today_str = str(date.today())
-
-fc1, fc2, fc3 = st.columns([1.3, 1.1, 0.6])
+fc1, fc2, fc3 = st.columns([1.2, 1.1, 0.55])
 
 with fc1:
     target_date = st.date_input("기준일", value=date.today())
@@ -340,12 +320,11 @@ with fc2:
 with fc3:
     st.write("")
     st.write("")
-    refresh = st.button("새로고침", use_container_width=True)
+    st.button("새로고침", use_container_width=True)
 
 selected_date = str(target_date)
 
 dashboard_data = fetch_dashboard_data(selected_date, site)
-
 if dashboard_data is None:
     st.stop()
 
@@ -353,29 +332,28 @@ kpi = dashboard_data.get("kpi", {})
 charts = dashboard_data.get("charts", {})
 safety_points = dashboard_data.get("safety_points", [])
 
-compliance_rate = kpi.get("compliance_rate", 0)
-compliance_rate_text = kpi.get("compliance_rate_text", f"{compliance_rate}%")
+compliance_rate = float(kpi.get("compliance_rate", 0) or 0)
+compliance_rate_text = kpi.get("compliance_rate_text", f"{round(compliance_rate, 2)}%")
 weakest_zone_name = safe_text(kpi.get("weakest_zone_name"))
-weakest_zone_score = float(kpi.get("weakest_zone_score", 0) or 0)
+weakest_zone_score = round(float(kpi.get("weakest_zone_score", 0) or 0), 2)
 most_missing_ppe_name = safe_text(kpi.get("most_missing_ppe_name"))
 most_missing_ppe_count = int(kpi.get("most_missing_ppe_count", 0) or 0)
 priority_task_text = safe_text(kpi.get("priority_task_text"))
 
+# 시간대별 차트 데이터
 hourly_df = pd.DataFrame(charts.get("hourly_violations", []))
-if not hourly_df.empty and "time_slot" in hourly_df.columns:
+if not hourly_df.empty:
     hourly_df["count"] = pd.to_numeric(hourly_df["count"], errors="coerce").fillna(0)
+    time_order = ["오전", "점심직후", "오후"]
+    hourly_df["time_slot"] = pd.Categorical(hourly_df["time_slot"], categories=time_order, ordered=True)
+    hourly_df = hourly_df.sort_values("time_slot")
 
+# 구역별 위험도 데이터
 zone_data = pd.DataFrame(charts.get("zone_risk_scores", []))
 if not zone_data.empty:
-    zone_data = zone_data.rename(columns={"zone": "zone", "risk_score": "risk"})
-    zone_data["risk"] = pd.to_numeric(zone_data["risk"], errors="coerce").fillna(0)
-
-    # 0~1 값으로 들어온 경우 0~100으로 보정
-    if zone_data["risk"].max() <= 1.0:
-        zone_data["risk"] = zone_data["risk"] * 100
-
-    zone_data["risk"] = zone_data["risk"].round(2)
-    zone_data = zone_data.sort_values("risk", ascending=False)
+    zone_data = zone_data.rename(columns={"risk_score": "risk"})
+    zone_data["risk"] = pd.to_numeric(zone_data["risk"], errors="coerce").fillna(0).round(2)
+    zone_data = zone_data.sort_values("risk", ascending=False).reset_index(drop=True)
 else:
     zone_data = pd.DataFrame(columns=["zone", "risk"])
 
@@ -453,9 +431,9 @@ st.markdown(
 )
 
 # =========================
-# 1행: 시간대별 그래프 / 안전포인트
+# 1행
 # =========================
-row1_col1, row1_col2 = st.columns([2.1, 1])
+row1_col1, row1_col2 = st.columns([1.85, 1.15])
 
 with row1_col1:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -465,14 +443,6 @@ with row1_col1:
     fig_time = go.Figure()
 
     if not hourly_df.empty:
-        time_order = ["오전", "점심직후", "오후"]
-        hourly_df["time_slot"] = pd.Categorical(
-            hourly_df["time_slot"],
-            categories=time_order,
-            ordered=True,
-        )
-        hourly_df = hourly_df.sort_values("time_slot")
-
         fig_time.add_trace(
             go.Bar(
                 x=hourly_df["time_slot"],
@@ -489,7 +459,7 @@ with row1_col1:
     y_max = max(4, max_count + 2)
 
     fig_time.update_layout(
-        height=350,
+        height=330,
         margin=dict(l=10, r=10, t=10, b=10),
         plot_bgcolor="white",
         paper_bgcolor="white",
@@ -498,14 +468,14 @@ with row1_col1:
         xaxis=dict(
             title="",
             showgrid=False,
-            tickfont=dict(size=13, color="#334155"),
+            tickfont=dict(size=12, color="#334155"),
         ),
         yaxis=dict(
             title="",
             showgrid=True,
             gridcolor="#e2e8f0",
             zeroline=False,
-            tickfont=dict(size=12, color="#475569"),
+            tickfont=dict(size=11, color="#475569"),
             range=[0, y_max],
             dtick=2,
         ),
@@ -516,13 +486,7 @@ with row1_col1:
     except Exception:
         pass
 
-    st.plotly_chart(
-        fig_time,
-        use_container_width=True,
-        config={"displayModeBar": False},
-        key="hourly_violation_chart",
-    )
-
+    st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
     st.markdown('</div>', unsafe_allow_html=True)
 
 with row1_col2:
@@ -548,9 +512,9 @@ with row1_col2:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# 2행: 구역별 위험도 / AI 분석
+# 2행
 # =========================
-row2_col1, row2_col2 = st.columns([2.1, 1])
+row2_col1, row2_col2 = st.columns([1.85, 1.15])
 
 with row2_col1:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -569,7 +533,7 @@ with row2_col1:
                     color=[get_zone_color(v) for v in zone_data["risk"]],
                     line=dict(color="#ffffff", width=0.5),
                 ),
-                width=0.5,
+                width=0.55,
                 hovertemplate="구역: %{y}<br>위험도: %{x}%<extra></extra>",
             )
         )
@@ -580,20 +544,20 @@ with row2_col1:
         plot_bgcolor="white",
         paper_bgcolor="white",
         showlegend=False,
-        bargap=0.42,
+        bargap=0.35,
         xaxis=dict(
             title="",
             range=[0, 100],
             dtick=20,
             gridcolor="#e2e8f0",
             zeroline=False,
-            tickfont=dict(size=12, color="#475569"),
+            tickfont=dict(size=11, color="#475569"),
         ),
         yaxis=dict(
             title="",
             autorange="reversed",
             showgrid=False,
-            tickfont=dict(size=13, color="#334155"),
+            tickfont=dict(size=12, color="#334155"),
         ),
     )
 
@@ -602,23 +566,15 @@ with row2_col1:
     except Exception:
         pass
 
-    st.plotly_chart(
-        fig_zone,
-        use_container_width=True,
-        config={"displayModeBar": False},
-        key="zone_risk_chart",
-    )
-
+    st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
     st.markdown(
         f'<div class="caption-note">{weakest_zone_name} 구역 내 위반비율 {weakest_zone_score}% · 0~100 기준 고정</div>',
         unsafe_allow_html=True,
     )
-
     st.markdown('</div>', unsafe_allow_html=True)
 
 with row2_col2:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-
     st.markdown(
         """
         <div class="ai-title-row">
