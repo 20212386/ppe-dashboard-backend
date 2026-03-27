@@ -181,12 +181,6 @@ st.markdown("""
     font-weight: 800;
     min-height: 46px;
 }
-
-div[data-testid="stDownloadButton"] > button {
-    border-radius: 14px;
-    font-weight: 800;
-    min-height: 44px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -292,7 +286,6 @@ else:
     recommend_action = "필터를 설정한 뒤 '분석 실행' 버튼을 눌러주세요."
     raw_rows = []
 
-# 데이터프레임 변환 시 강제로 숫자(int)로 변환하여 에러 방지
 time_df = pd.DataFrame(charts.get("time_chart", []))
 if not time_df.empty: time_df["count"] = pd.to_numeric(time_df["count"], errors="coerce").fillna(0).astype(int)
 
@@ -358,20 +351,21 @@ with r1c1:
                 go.Bar(
                     x=time_df["label"].astype(str).tolist(),
                     y=time_df["count"].tolist(),
-                    orientation="v", # 정상적인 세로 막대
+                    orientation="v",
+                    width=0.35, # 뚱뚱이 방지 (슬림하게!)
                     marker=dict(color="#3b82f6"),
                     hovertemplate="%{x}: %{y}건<extra></extra>"
                 )
             )
 
         fig_time.update_layout(
-            height=320, margin=dict(l=10, r=10, t=8, b=8),
+            height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
-            showlegend=False, bargap=0.4,
+            showlegend=False, bargap=0.6,
             xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
-            yaxis=dict(showgrid=True, gridcolor="#e2e8f0", zeroline=False, tickfont=dict(size=11, color="#475569")) # dtick 삭제로 자동 스케일링
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
         )
-        try: fig_time.update_layout(barcornerradius=12)
+        try: fig_time.update_layout(barcornerradius=15) # 동글동글 라운드 처리
         except Exception: pass
         st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
         
@@ -397,19 +391,20 @@ with r1c2:
                     x=ppe_df["label"].astype(str).tolist(),
                     y=ppe_df["count"].tolist(),
                     orientation="v",
+                    width=0.35, # 뚱뚱이 방지
                     marker=dict(color=ppe_colors),
                     hovertemplate="%{x}: %{y}건<extra></extra>"
                 )
             )
 
         fig_ppe.update_layout(
-            height=320, margin=dict(l=10, r=10, t=8, b=8),
+            height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
-            showlegend=False, bargap=0.4,
+            showlegend=False, bargap=0.6,
             xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
-            yaxis=dict(showgrid=True, gridcolor="#e2e8f0", zeroline=False, tickfont=dict(size=11, color="#475569"))
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
         )
-        try: fig_ppe.update_layout(barcornerradius=12)
+        try: fig_ppe.update_layout(barcornerradius=15)
         except Exception: pass
         st.plotly_chart(fig_ppe, use_container_width=True, config={"displayModeBar": False})
         
@@ -438,20 +433,21 @@ with r2c1:
                 go.Bar(
                     x=zone_df["count"].tolist(),             
                     y=zone_df["label"].astype(str).tolist(), 
-                    orientation="h", # 가로 막대
+                    orientation="h",
+                    width=0.35, # 뚱뚱이 방지
                     marker=dict(color=zone_colors),
                     hovertemplate="%{y}: %{x}건<extra></extra>"
                 )
             )
 
         fig_zone.update_layout(
-            height=320, margin=dict(l=10, r=10, t=8, b=8),
+            height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
-            showlegend=False, bargap=0.4,
-            xaxis=dict(showgrid=True, gridcolor="#e2e8f0", zeroline=False, tickfont=dict(size=11, color="#475569")),
+            showlegend=False, bargap=0.6,
+            xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8")),
             yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#334155"))
         )
-        try: fig_zone.update_layout(barcornerradius=12)
+        try: fig_zone.update_layout(barcornerradius=15)
         except Exception: pass
         st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
         
@@ -474,20 +470,21 @@ with r2c2:
                 go.Bar(
                     x=task_df["count"].tolist(),             
                     y=task_df["label"].astype(str).tolist(), 
-                    orientation="h", # 가로 막대
+                    orientation="h",
+                    width=0.35, # 뚱뚱이 방지
                     marker=dict(color="#8b5cf6"),
                     hovertemplate="%{y}: %{x}건<extra></extra>"
                 )
             )
 
         fig_task.update_layout(
-            height=320, margin=dict(l=10, r=10, t=8, b=8),
+            height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
-            showlegend=False, bargap=0.4,
-            xaxis=dict(showgrid=True, gridcolor="#e2e8f0", zeroline=False, tickfont=dict(size=11, color="#475569")),
+            showlegend=False, bargap=0.6,
+            xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8")),
             yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#334155"))
         )
-        try: fig_task.update_layout(barcornerradius=12)
+        try: fig_task.update_layout(barcornerradius=15)
         except Exception: pass
         st.plotly_chart(fig_task, use_container_width=True, config={"displayModeBar": False})
         
