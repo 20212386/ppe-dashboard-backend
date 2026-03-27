@@ -340,7 +340,7 @@ most_missing_ppe_name = safe_text(kpi.get("most_missing_ppe_name"))
 most_missing_ppe_count = int(kpi.get("most_missing_ppe_count", 0) or 0)
 priority_task_text = safe_text(kpi.get("priority_task_text"))
 
-# 시간대별 차트 데이터 (데이터 처리만 진행)
+# 시간대별 차트 데이터
 hourly_df = pd.DataFrame(charts.get("hourly_violations", []))
 if not hourly_df.empty:
     hourly_df["count"] = pd.to_numeric(hourly_df["count"], errors="coerce").fillna(0)
@@ -348,7 +348,7 @@ if not hourly_df.empty:
     hourly_df["time_slot"] = pd.Categorical(hourly_df["time_slot"], categories=time_order, ordered=True)
     hourly_df = hourly_df.sort_values("time_slot")
 
-# 구역별 위험도 데이터 (데이터 처리만 진행)
+# 구역별 위험도 데이터
 zone_data = pd.DataFrame(charts.get("zone_risk_scores", []))
 if not zone_data.empty:
     zone_data = zone_data.rename(columns={"risk_score": "risk"})
@@ -431,7 +431,7 @@ st.markdown(
 )
 
 # =========================
-# 1행
+# 1행 (시간대별 이탈 건수)
 # =========================
 row1_col1, row1_col2 = st.columns([1.85, 1.15])
 
@@ -445,9 +445,9 @@ with row1_col1:
     if not hourly_df.empty:
         fig_time.add_trace(
             go.Bar(
-                x=hourly_df["time_slot"].astype(str).tolist(),  # 리스트로 변환
-                y=hourly_df["count"].tolist(),  # 리스트로 변환
-                orientation="v",  # 세로 막대 명시
+                x=hourly_df["time_slot"].astype(str).tolist(),
+                y=hourly_df["count"].tolist(),
+                orientation="v",
                 marker=dict(
                     color=["#3b82f6", "#60a5fa", "#1d4ed8"],
                     line=dict(color="#2563eb", width=1),
@@ -471,7 +471,7 @@ with row1_col1:
             showgrid=False,
             tickfont=dict(size=12, color="#334155"),
             categoryorder="array", 
-            categoryarray=["오전", "점심직후", "오후"] # X축 순서 고정
+            categoryarray=["오전", "점심직후", "오후"]
         ),
         yaxis=dict(
             title="",
@@ -484,8 +484,9 @@ with row1_col1:
         ),
     )
 
+    # 둥글게 깎아주는 부분 (숫자 15로 높임!)
     try:
-        fig_time.update_layout(barcornerradius=8)
+        fig_time.update_layout(barcornerradius=15)
     except Exception:
         pass
 
@@ -515,7 +516,7 @@ with row1_col2:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# 2행
+# 2행 (작업구역별 위험도)
 # =========================
 row2_col1, row2_col2 = st.columns([1.85, 1.15])
 
@@ -529,9 +530,9 @@ with row2_col1:
     if not zone_data.empty:
         fig_zone.add_trace(
             go.Bar(
-                x=zone_data["risk"].tolist(),  # 리스트로 변환
-                y=zone_data["zone"].tolist(),  # 리스트로 변환
-                orientation="h",  # 가로 막대 명시
+                x=zone_data["risk"].tolist(),
+                y=zone_data["zone"].tolist(),
+                orientation="h",
                 marker=dict(
                     color=[get_zone_color(v) for v in zone_data["risk"]],
                     line=dict(color="#ffffff", width=0.5),
@@ -564,8 +565,9 @@ with row2_col1:
         ),
     )
 
+    # 둥글게 깎아주는 부분 (숫자 15로 높임!)
     try:
-        fig_zone.update_layout(barcornerradius=8)
+        fig_zone.update_layout(barcornerradius=15)
     except Exception:
         pass
 
