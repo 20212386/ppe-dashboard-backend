@@ -21,3 +21,5 @@ uvicorn==0.42.0
 streamlit
 requests
 altair==4.2.2
+plotly
+
