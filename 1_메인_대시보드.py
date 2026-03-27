@@ -340,40 +340,22 @@ most_missing_ppe_name = safe_text(kpi.get("most_missing_ppe_name"))
 most_missing_ppe_count = int(kpi.get("most_missing_ppe_count", 0) or 0)
 priority_task_text = safe_text(kpi.get("priority_task_text"))
 
-# 시간대별 차트 데이터
+# 시간대별 차트 데이터 (데이터 처리만 진행)
 hourly_df = pd.DataFrame(charts.get("hourly_violations", []))
 if not hourly_df.empty:
-        fig_time.add_trace(
-            go.Bar(
-                # Categorical을 문자열로 바꾼 뒤 리스트로 변환
-                x=hourly_df["time_slot"].astype(str).tolist(),
-                y=hourly_df["count"].tolist(),
-                orientation="v",  # 세로형 막대 명시
-                marker=dict(
-                    color=["#3b82f6", "#60a5fa", "#1d4ed8"],
-                    line=dict(color="#2563eb", width=1),
-                ),
-                hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>",
-            )
-        )
+    hourly_df["count"] = pd.to_numeric(hourly_df["count"], errors="coerce").fillna(0)
+    time_order = ["오전", "점심직후", "오후"]
+    hourly_df["time_slot"] = pd.Categorical(hourly_df["time_slot"], categories=time_order, ordered=True)
+    hourly_df = hourly_df.sort_values("time_slot")
 
-# 구역별 위험도 데이터
+# 구역별 위험도 데이터 (데이터 처리만 진행)
 zone_data = pd.DataFrame(charts.get("zone_risk_scores", []))
 if not zone_data.empty:
-        fig_zone.add_trace(
-            go.Bar(
-                # Pandas Series 대신 순수 리스트로 전달
-                x=zone_data["risk"].tolist(),
-                y=zone_data["zone"].tolist(),
-                orientation="h",
-                marker=dict(
-                    color=[get_zone_color(v) for v in zone_data["risk"]],
-                    line=dict(color="#ffffff", width=0.5),
-                ),
-                width=0.55,
-                hovertemplate="구역: %{y}<br>위험도: %{x}%<extra></extra>",
-            )
-        )
+    zone_data = zone_data.rename(columns={"risk_score": "risk"})
+    zone_data["risk"] = pd.to_numeric(zone_data["risk"], errors="coerce").fillna(0).round(2)
+    zone_data = zone_data.sort_values("risk", ascending=False).reset_index(drop=True)
+else:
+    zone_data = pd.DataFrame(columns=["zone", "risk"])
 
 if not safety_points:
     safety_points = ["오늘은 위반 데이터가 없어 전반적으로 양호합니다."]
@@ -463,8 +445,9 @@ with row1_col1:
     if not hourly_df.empty:
         fig_time.add_trace(
             go.Bar(
-                x=hourly_df["time_slot"],
-                y=hourly_df["count"],
+                x=hourly_df["time_slot"].astype(str).tolist(),  # 리스트로 변환
+                y=hourly_df["count"].tolist(),  # 리스트로 변환
+                orientation="v",  # 세로 막대 명시
                 marker=dict(
                     color=["#3b82f6", "#60a5fa", "#1d4ed8"],
                     line=dict(color="#2563eb", width=1),
@@ -488,7 +471,7 @@ with row1_col1:
             showgrid=False,
             tickfont=dict(size=12, color="#334155"),
             categoryorder="array", 
-            categoryarray=["오전", "점심직후", "오후"]  # 순서 강제 고정
+            categoryarray=["오전", "점심직후", "오후"] # X축 순서 고정
         ),
         yaxis=dict(
             title="",
@@ -546,9 +529,9 @@ with row2_col1:
     if not zone_data.empty:
         fig_zone.add_trace(
             go.Bar(
-                x=zone_data["risk"],
-                y=zone_data["zone"],
-                orientation="h",
+                x=zone_data["risk"].tolist(),  # 리스트로 변환
+                y=zone_data["zone"].tolist(),  # 리스트로 변환
+                orientation="h",  # 가로 막대 명시
                 marker=dict(
                     color=[get_zone_color(v) for v in zone_data["risk"]],
                     line=dict(color="#ffffff", width=0.5),
