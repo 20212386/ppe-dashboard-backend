@@ -335,10 +335,10 @@ with r1c1:
                     x=time_df["label"].astype(str).tolist(),
                     y=time_df["count"].tolist(),
                     orientation="v",
-                    width=0.45,
+                    # width 속성을 삭제하여 자동으로 비율 조절되도록 유도
                     marker=dict(
-                        color="rgba(59, 130, 246, 0.65)", # 💡 반투명한 파란색
-                        line=dict(color="rgba(37, 99, 235, 1.0)", width=1.5) # 💡 진한 파란색 테두리
+                        color="rgba(59, 130, 246, 0.65)",
+                        line=dict(color="rgba(37, 99, 235, 1.0)", width=1.5)
                     ),
                     hovertemplate="%{x}: %{y}건<extra></extra>"
                 )
@@ -348,6 +348,8 @@ with r1c1:
             height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
             showlegend=False,
+            # ✨ bargap을 넓혀서 막대 사이 간격을 확보하고 날씬하게 만듦
+            bargap=0.6, 
             xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
             yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
         )
@@ -386,10 +388,10 @@ with r1c2:
                     x=ppe_df["label"].astype(str).tolist(),
                     y=ppe_df["count"].tolist(),
                     orientation="v",
-                    width=0.45,
+                    # 💡 사용자 요청 핵심: 뚱뚱이 다이어트 (width는 놔두고 bargap으로 조절)
                     marker=dict(
                         color=ppe_colors,
-                        line=dict(color=ppe_lines, width=1.5) # 💡 여기도 반투명 + 테두리 적용!
+                        line=dict(color=ppe_lines, width=1.5)
                     ),
                     hovertemplate="%{x}: %{y}건<extra></extra>"
                 )
@@ -399,6 +401,8 @@ with r1c2:
             height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
             showlegend=False,
+            # ✨ 사용자 요청 핵심: 뚱뚱이 다이어트 (0.6로 팍팍 넓혀서 날씬하게!)
+            bargap=0.6, 
             xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
             yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
         )
@@ -431,7 +435,7 @@ with r2c1:
                     x=zone_df["count"].tolist(),             
                     y=zone_df["label"].astype(str).tolist(), 
                     orientation="h",
-                    width=0.45,
+                    # 가로 막대도 통일감 있게 자동으로 비율 조절되도록 width 삭제
                     marker=dict(
                         color=zone_colors,
                         line=dict(color=zone_lines, width=1.5)
@@ -444,6 +448,8 @@ with r2c1:
             height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
             showlegend=False,
+            # ✨ 가로 막대 간격도 넓혀서 슬림하게 보이게 함
+            bargap=0.6, 
             xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8")),
             yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#334155"))
         )
@@ -469,7 +475,7 @@ with r2c2:
                     x=task_df["count"].tolist(),             
                     y=task_df["label"].astype(str).tolist(), 
                     orientation="h",
-                    width=0.45,
+                    # 자동으로 비율 조절되도록 width 삭제
                     marker=dict(
                         color="rgba(139, 92, 246, 0.65)",
                         line=dict(color="rgba(109, 40, 217, 1.0)", width=1.5)
@@ -482,6 +488,8 @@ with r2c2:
             height=300, margin=dict(l=10, r=10, t=20, b=10),
             plot_bgcolor="white", paper_bgcolor="white",
             showlegend=False,
+            # ✨ 가로 막대 간격도 넓혀서 슬림하게 보이게 함
+            bargap=0.6, 
             xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8")),
             yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#334155"))
         )
