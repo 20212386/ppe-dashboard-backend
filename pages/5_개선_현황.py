@@ -10,7 +10,6 @@ st.set_page_config(
 
 API_BASE_URL = "https://ppe-dashboard-backend.onrender.com"
 
-
 # =========================
 # API
 # =========================
@@ -23,7 +22,6 @@ def fetch_incentive_data():
         st.error(f"개선 현황 조회 실패: {e}")
         return None
 
-
 # =========================
 # 스타일
 # =========================
@@ -34,7 +32,6 @@ st.markdown("""
     padding-bottom: 2rem;
     max-width: 1480px;
 }
-
 .main-title {
     font-size: 2.1rem;
     font-weight: 800;
@@ -42,13 +39,11 @@ st.markdown("""
     margin-bottom: 0.2rem;
     letter-spacing: -0.02em;
 }
-
 .sub-title {
     color: #64748b;
     font-size: 1rem;
     margin-bottom: 1rem;
 }
-
 .section-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -57,20 +52,17 @@ st.markdown("""
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
     margin-bottom: 1rem;
 }
-
 .section-title {
     font-size: 1.15rem;
     font-weight: 800;
     color: #0f172a;
     margin-bottom: 0.8rem;
 }
-
 .section-sub {
     color: #64748b;
     font-size: 0.86rem;
     margin-bottom: 1rem;
 }
-
 .principle-card {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     border: 1px solid #bfdbfe;
@@ -78,21 +70,18 @@ st.markdown("""
     padding: 20px 22px;
     margin-bottom: 1rem;
 }
-
 .principle-title {
     font-size: 1.05rem;
     font-weight: 800;
     color: #1d4ed8;
     margin-bottom: 12px;
 }
-
 .principle-item {
     font-size: 0.9rem;
     color: #1e3a8a;
     line-height: 1.6;
     font-weight: 700;
 }
-
 .metric-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -101,21 +90,18 @@ st.markdown("""
     min-height: 145px;
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
 }
-
 .metric-top {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 14px;
 }
-
 .metric-label {
     color: #64748b;
     font-size: 0.92rem;
     margin-bottom: 10px;
     font-weight: 600;
 }
-
 .metric-value {
     color: #0f172a;
     font-size: 1.8rem;
@@ -124,7 +110,6 @@ st.markdown("""
     margin-bottom: 10px;
     letter-spacing: -0.02em;
 }
-
 .metric-badge {
     display: inline-block;
     padding: 6px 11px;
@@ -132,7 +117,6 @@ st.markdown("""
     font-size: 0.76rem;
     font-weight: 700;
 }
-
 .metric-icon {
     width: 52px;
     height: 52px;
@@ -143,7 +127,6 @@ st.markdown("""
     font-size: 1.35rem;
     flex-shrink: 0;
 }
-
 .insight-box {
     border-radius: 14px;
     padding: 12px 14px;
@@ -152,7 +135,6 @@ st.markdown("""
     line-height: 1.55;
     border: 1px solid;
 }
-
 .summary-item {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -163,25 +145,21 @@ st.markdown("""
     font-size: 0.9rem;
     line-height: 1.6;
 }
-
 .recommend-card {
     border-radius: 18px;
     padding: 16px 18px;
     margin-bottom: 12px;
     border: 1px solid;
 }
-
 .recommend-title {
     font-size: 1rem;
     font-weight: 800;
     margin-bottom: 8px;
 }
-
 .recommend-desc {
     font-size: 0.9rem;
     line-height: 1.6;
 }
-
 .notice-box {
     background: #eff6ff;
     border: 1px solid #93c5fd;
@@ -191,7 +169,6 @@ st.markdown("""
     font-size: 0.92rem;
     line-height: 1.7;
 }
-
 .stButton > button {
     border-radius: 14px;
     font-weight: 700;
@@ -199,7 +176,6 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-
 
 # =========================
 # 렌더
@@ -221,9 +197,8 @@ def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, ico
         unsafe_allow_html=True
     )
 
-
 # =========================
-# 데이터
+# 데이터 전처리 (에러 방지)
 # =========================
 data = fetch_incentive_data()
 
@@ -233,28 +208,29 @@ if data:
     team_comparison_chart = data.get("team_comparison_chart", [])
     team_summary = data.get("team_summary", [])
 else:
-    kpis = {
-        "improvement_rate": 0,
-        "repeat_ppe_reduction_rate": 0,
-        "risk_recurrence_reduction_rate": 0,
-        "best_team": "-"
-    }
-    charts = {
-        "violation_trend_chart": [],
-        "ppe_trend_chart": []
-    }
+    kpis = {"improvement_rate": 0, "repeat_ppe_reduction_rate": 0, "risk_recurrence_reduction_rate": 0, "best_team": "-"}
+    charts = {"violation_trend_chart": [], "ppe_trend_chart": []}
     team_comparison_chart = []
     team_summary = []
 
+# 💡 강제로 숫자로 변환하여 차트 증발 현상 원천 차단!
 violation_df = pd.DataFrame(charts.get("violation_trend_chart", []))
+if not violation_df.empty:
+    violation_df["count"] = pd.to_numeric(violation_df["count"], errors="coerce").fillna(0).astype(int)
+
 ppe_df = pd.DataFrame(charts.get("ppe_trend_chart", []))
+if not ppe_df.empty:
+    ppe_df["count"] = pd.to_numeric(ppe_df["count"], errors="coerce").fillna(0).astype(int)
+
 team_df = pd.DataFrame(team_comparison_chart)
+if not team_df.empty:
+    team_df["initial_rate"] = pd.to_numeric(team_df["initial_rate"], errors="coerce").fillna(0)
+    team_df["current_rate"] = pd.to_numeric(team_df["current_rate"], errors="coerce").fillna(0)
 
 improvement_rate = kpis.get("improvement_rate", 0)
 repeat_reduction = kpis.get("repeat_ppe_reduction_rate", 0)
 risk_reduction = kpis.get("risk_recurrence_reduction_rate", 0)
 best_team = kpis.get("best_team", "-")
-
 
 # =========================
 # 헤더
@@ -277,69 +253,24 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 # =========================
 # KPI
 # =========================
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
-    render_metric_card(
-        "이번 주 개선율",
-        f"{improvement_rate}%p",
-        "전주 대비 변화",
-        "#22c55e",
-        "#dcfce7",
-        "#166534",
-        "#dcfce7",
-        "#16a34a",
-        "📈"
-    )
-
+    render_metric_card("이번 주 개선율", f"{improvement_rate}%p", "전주 대비 변화", "#22c55e", "#dcfce7", "#166534", "#dcfce7", "#16a34a", "📈")
 with c2:
-    render_metric_card(
-        "반복 누락 감소율",
-        f"{repeat_reduction}%",
-        "5주간 집계",
-        "#3b82f6",
-        "#dbeafe",
-        "#1d4ed8",
-        "#dbeafe",
-        "#2563eb",
-        "📉"
-    )
-
+    render_metric_card("반복 누락 감소율", f"{repeat_reduction}%", "5주간 집계", "#3b82f6", "#dbeafe", "#1d4ed8", "#dbeafe", "#2563eb", "📉")
 with c3:
-    render_metric_card(
-        "위험행동 재발 감소율",
-        f"{risk_reduction}%",
-        "반복 행동 감소",
-        "#a855f7",
-        "#f3e8ff",
-        "#7e22ce",
-        "#f3e8ff",
-        "#9333ea",
-        "📊"
-    )
-
+    render_metric_card("위험행동 재발 감소율", f"{risk_reduction}%", "반복 행동 감소", "#a855f7", "#f3e8ff", "#7e22ce", "#f3e8ff", "#9333ea", "📊")
 with c4:
-    render_metric_card(
-        "우수 개선 팀",
-        best_team,
-        "현재 최고 개선",
-        "#f97316",
-        "#ffedd5",
-        "#c2410c",
-        "#ffedd5",
-        "#ea580c",
-        "🏅"
-    )
+    render_metric_card("우수 개선 팀", best_team, "현재 최고 개선", "#f97316", "#ffedd5", "#c2410c", "#ffedd5", "#ea580c", "🏅")
 
 st.write("")
 
-
 # =========================
-# 차트 1행
+# 차트 1행 (곡선 트렌드 차트)
 # =========================
 l1, r1 = st.columns(2)
 
@@ -351,33 +282,27 @@ with l1:
     if not violation_df.empty:
         fig_v.add_trace(
             go.Scatter(
-                x=violation_df["label"],
-                y=violation_df["count"],
+                x=violation_df["label"].astype(str).tolist(),
+                y=violation_df["count"].tolist(),
                 mode="lines+markers",
-                line=dict(color="#2563eb", width=3),
-                marker=dict(size=8),
+                line=dict(color="#3b82f6", width=3, shape="spline"), # ✨ 부드러운 곡선 적용
+                marker=dict(size=8, color="#2563eb", line=dict(color="white", width=2)),
+                fill="tozeroy", # ✨ 그라데이션 채우기 효과
+                fillcolor="rgba(59, 130, 246, 0.15)",
                 hovertemplate="%{x}: %{y}건<extra></extra>"
             )
         )
 
-    max_v = int(violation_df["count"].max()) if not violation_df.empty else 0
-    y_max_v = max(10, ((max_v + 4) // 5 + 1) * 5)
-
     fig_v.update_layout(
-        height=320,
-        margin=dict(l=10, r=10, t=10, b=10),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        showlegend=False,
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor="#e2e8f0", dtick=5, range=[0, y_max_v])
+        height=320, margin=dict(l=10, r=10, t=20, b=10),
+        plot_bgcolor="white", paper_bgcolor="white", showlegend=False,
+        xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
+        # ✨ dtick, range 삭제하여 자동 스케일링 유도 (알아서 꽉 차게 그림)
+        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
     )
 
     st.plotly_chart(fig_v, use_container_width=True, config={"displayModeBar": False}, key="p5_violation_chart")
-    st.markdown(
-        '<div class="insight-box" style="background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a;">📌 주간 위험행동 추세를 기반으로 개선 흐름을 추적합니다.</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="insight-box" style="background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a;">📌 주간 위험행동 추세를 기반으로 개선 흐름을 추적합니다.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r1:
@@ -388,38 +313,31 @@ with r1:
     if not ppe_df.empty:
         fig_p.add_trace(
             go.Scatter(
-                x=ppe_df["label"],
-                y=ppe_df["count"],
+                x=ppe_df["label"].astype(str).tolist(),
+                y=ppe_df["count"].tolist(),
                 mode="lines+markers",
-                line=dict(color="#f97316", width=3),
-                marker=dict(size=8),
+                line=dict(color="#f97316", width=3, shape="spline"), # ✨ 부드러운 오렌지색 곡선
+                marker=dict(size=8, color="#ea580c", line=dict(color="white", width=2)),
+                fill="tozeroy", 
+                fillcolor="rgba(249, 115, 22, 0.15)",
                 hovertemplate="%{x}: %{y}건<extra></extra>"
             )
         )
 
-    max_p = int(ppe_df["count"].max()) if not ppe_df.empty else 0
-    y_max_p = max(10, ((max_p + 4) // 5 + 1) * 5)
-
     fig_p.update_layout(
-        height=320,
-        margin=dict(l=10, r=10, t=10, b=10),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        showlegend=False,
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor="#e2e8f0", dtick=5, range=[0, y_max_p])
+        height=320, margin=dict(l=10, r=10, t=20, b=10),
+        plot_bgcolor="white", paper_bgcolor="white", showlegend=False,
+        xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
+        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
     )
 
     st.plotly_chart(fig_p, use_container_width=True, config={"displayModeBar": False}, key="p5_ppe_chart")
-    st.markdown(
-        '<div class="insight-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">📌 반복 누락 PPE 감소 여부를 통해 보호구 착용문화 개선 수준을 판단합니다.</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="insight-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">📌 반복 누락 PPE 감소 여부를 통해 보호구 착용문화 개선 수준을 판단합니다.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================
-# 팀 비교
+# 팀 비교 (막대그래프 복구 및 스타일링)
 # =========================
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="section-title">팀별 개선율 비교</div>', unsafe_allow_html=True)
@@ -430,76 +348,51 @@ fig_team = go.Figure()
 if not team_df.empty:
     fig_team.add_trace(
         go.Bar(
-            x=team_df["team"],
-            y=team_df["initial_rate"],
+            x=team_df["team"].astype(str).tolist(),
+            y=team_df["initial_rate"].tolist(),
             name="초기 준수율 %",
             marker=dict(
-                color="#cbd5e1",
-                line=dict(color="#94a3b8", width=0.6)
+                color="rgba(148, 163, 184, 0.65)", # ✨ 세련된 반투명 회색
+                line=dict(color="#94a3b8", width=1.5)
             ),
-            width=0.28,
             offsetgroup="1",
-            hovertemplate="%{x}<br>초기 준수율: %{y}%<extra></extra>"
+            hovertemplate="팀: %{x}<br>초기 준수율: %{y}%<extra></extra>"
         )
     )
 
     fig_team.add_trace(
         go.Bar(
-            x=team_df["team"],
-            y=team_df["current_rate"],
+            x=team_df["team"].astype(str).tolist(),
+            y=team_df["current_rate"].tolist(),
             name="현재 준수율 %",
             marker=dict(
-                color=["#3b82f6", "#60a5fa", "#818cf8", "#22c55e"][:len(team_df)],
-                line=dict(color="#ffffff", width=0.6)
+                color="rgba(59, 130, 246, 0.75)", # ✨ 세련된 반투명 파란색
+                line=dict(color="#2563eb", width=1.5)
             ),
-            width=0.28,
             offsetgroup="2",
-            hovertemplate="%{x}<br>현재 준수율: %{y}%<extra></extra>"
+            hovertemplate="팀: %{x}<br>현재 준수율: %{y}%<extra></extra>"
         )
     )
 
 fig_team.update_layout(
-    height=340,
-    margin=dict(l=10, r=10, t=10, b=10),
-    plot_bgcolor="white",
-    paper_bgcolor="white",
+    height=340, margin=dict(l=10, r=10, t=10, b=10),
+    plot_bgcolor="white", paper_bgcolor="white",
     barmode="group",
-    bargap=0.42,
-    bargroupgap=0.12,
-    xaxis=dict(
-        showgrid=False,
-        tickfont=dict(size=12, color="#334155")
-    ),
-    yaxis=dict(
-        showgrid=True,
-        gridcolor="#e2e8f0",
-        gridwidth=1,
-        zeroline=False,
-        dtick=20,
-        range=[0, 100],
-        tickfont=dict(size=11, color="#475569")
-    ),
-    legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.02,
-        xanchor="right",
-        x=1,
-        font=dict(size=11)
-    )
+    bargap=0.45, # ✨ 막대 뚱뚱이 방지
+    bargroupgap=0.1,
+    xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
+    # ✨ y축 고정값 삭제로 알아서 빵빵하게 스케일 조절됨
+    yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), ticksuffix="%"),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11))
 )
 
 try:
-    fig_team.update_layout(barcornerradius=10)
+    fig_team.update_layout(barcornerradius=12) # 모서리 둥글게!
 except Exception:
     pass
 
-st.plotly_chart(
-    fig_team,
-    use_container_width=True,
-    config={"displayModeBar": False},
-    key="p5_team_chart"
-)
+st.plotly_chart(fig_team, use_container_width=True, config={"displayModeBar": False}, key="p5_team_chart")
+st.markdown('</div>', unsafe_allow_html=True) # 💡 누락되었던 핵심 닫기 태그 복구!!
 
 
 # =========================
@@ -517,17 +410,14 @@ with col_left:
             <div class="recommend-title">1) 체력 회복 지원</div>
             <div class="recommend-desc">월 1회 우수 개선 팀 대상 간식/음료 또는 회복 키트 제공</div>
         </div>
-
         <div class="recommend-card" style="background:#eff6ff; border-color:#93c5fd; color:#1d4ed8;">
             <div class="recommend-title">2) 보호장치 우선권</div>
             <div class="recommend-desc">개선 팀에 신규 안전모, 프리미엄 장갑, 보조 보호장비 우선 지급</div>
         </div>
-
         <div class="recommend-card" style="background:#faf5ff; border-color:#d8b4fe; color:#7e22ce;">
             <div class="recommend-title">3) 휴게환경 개선</div>
             <div class="recommend-desc">분기 우수 팀 대상 휴게공간 환경 개선 또는 복지 항목 확대</div>
         </div>
-
         <div class="recommend-card" style="background:#fff7ed; border-color:#fdba74; color:#c2410c;">
             <div class="recommend-title">4) 우수사례 공유</div>
             <div class="recommend-desc">안전 개선 사례를 사내 게시판/회의에서 공유해 팀 동기 부여 강화</div>
@@ -535,7 +425,6 @@ with col_left:
         """,
         unsafe_allow_html=True
     )
-
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_right:
@@ -553,5 +442,4 @@ with col_right:
         """,
         unsafe_allow_html=True
     )
-
     st.markdown('</div>', unsafe_allow_html=True)
