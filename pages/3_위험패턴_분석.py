@@ -132,6 +132,7 @@ params = {
 }
 
 if run_analysis:
+    st.write("DDEBUG PARAMS:", params)
     st.session_state["p3_analysis_data"] = fetch_analysis_data(params)
 
 analysis_data = st.session_state["p3_analysis_data"]
