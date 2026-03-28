@@ -115,6 +115,12 @@ with f8:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
+risk_exposure_param = None
+if risk_exposure == "O":
+    risk_exposure_param = 1
+elif risk_exposure == "X":
+    risk_exposure_param = 0
+
 params = {
     "start_date": start_date or None,
     "end_date": end_date or None,
