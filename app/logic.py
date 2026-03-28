@@ -487,19 +487,38 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
 
 def get_recommend_action(df: pd.DataFrame) -> str:
     if df.empty: return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 PPE 점검을 유지하세요."
-    is_viol = _get_violation_series_p3(df)
+    
+    # 위반 판독기 이름이 get_violation_series 거나 _get_violation_series_p3 일 수 있으니 안전하게 호출
+    try:
+        is_viol = get_violation_series(df)
+    except NameError:
+        is_viol = _get_violation_series_p3(df)
+        
     violated_df = df[is_viol].copy()
     if violated_df.empty: return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 PPE 점검을 유지하세요."
 
-    ppe_col = _get_ppe_col(violated_df)
-    top_ppe = violated_df[ppe_col].astype(str).replace(["nan", "None", ""], pd.NA).dropna().value_counts().idxmax() if ppe_col and not violated_df[ppe_col].dropna().empty else ""
-    top_task = violated_df["task_type"].astype(str).replace(["nan", "None", ""], pd.NA).dropna().value_counts().idxmax() if "task_type" in violated_df.columns and not violated_df["task_type"].dropna().empty else ""
+    # 💡 빈 방에서 1등 찾다가 에러나는 현상 완벽 차단!
+    ppe_col = get_ppe_col(violated_df) if "get_ppe_col" in globals() else _get_ppe_col(violated_df)
+    top_ppe = ""
+    if ppe_col:
+        p_counts = violated_df[ppe_col].astype(str).replace(["nan", "None", ""], pd.NA).dropna().value_counts()
+        if not p_counts.empty:  # 데이터가 있을 때만 1등을 찾아라!
+            top_ppe = p_counts.idxmax()
 
+    top_task = ""
+    if "task_type" in violated_df.columns:
+        t_counts = violated_df["task_type"].astype(str).replace(["nan", "None", ""], pd.NA).dropna().value_counts()
+        if not t_counts.empty:  # 데이터가 있을 때만 1등을 찾아라!
+            top_task = t_counts.idxmax()
+
+    # 결과 출력
     if "랜야드" in str(top_ppe): return f"{top_task} 전 랜야드 체결 여부를 우선 점검하세요."
     if "안전모" in str(top_ppe): return f"{top_task} 전 안전모 착용 여부를 우선 점검하세요."
     if "장갑" in str(top_ppe): return f"{top_task} 전 장갑 착용 여부를 우선 점검하세요."
 
-    return f"{top_task} 작업 전 PPE 착용 여부를 우선 점검하세요."
+    if top_task:
+        return f"{top_task} 작업 전 PPE 착용 여부를 우선 점검하세요."
+    return "작업 전 기본 PPE 착용 여부를 꼼꼼히 점검하세요."
 
 
 # =========================
