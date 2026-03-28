@@ -382,12 +382,12 @@ def filter_input_data(
 
     if start_date and "date" in filtered_df.columns:
         filtered_df = filtered_df[
-            filtered_df["date"].astype(str) >= str(start_date)
+            filtered_df["date"].astype(str).str.strip() >= str(start_date).strip()
         ].copy()
 
     if end_date and "date" in filtered_df.columns:
         filtered_df = filtered_df[
-            filtered_df["date"].astype(str) <= str(end_date)
+            filtered_df["date"].astype(str).str.strip() <= str(end_date).strip()
         ].copy()
 
     if site and "site" in filtered_df.columns:
@@ -405,28 +405,18 @@ def filter_input_data(
             filtered_df["task_type"].astype(str).str.strip() == str(task_type).strip()
         ].copy()
 
-    # PPE 필터: ppe_type 컬럼이 비어 있으면 note에서 찾기
-    if ppe_type:
-        if "ppe_type" in filtered_df.columns:
-            ppe_series = filtered_df["ppe_type"].astype(str).str.strip()
-            note_series = filtered_df["note"].astype(str).apply(_extract_ppe_from_note) if "note" in filtered_df.columns else ""
-            effective_ppe = ppe_series.where(ppe_series != "", note_series)
-            filtered_df = filtered_df[
-                effective_ppe.astype(str).str.strip() == str(ppe_type).strip()
-            ].copy()
+    if ppe_type and "missed_ppe" in filtered_df.columns:
+        filtered_df = filtered_df[
+            filtered_df["missed_ppe"].astype(str).str.strip() == str(ppe_type).strip()
+        ].copy()
 
-    # 위험노출 여부 필터: risk_exposure 컬럼이 비어 있으면 note로 판정
-    if risk_exposure:
-        if str(risk_exposure) in ["1", "O"]:
-            if "note" in filtered_df.columns:
-                filtered_df = filtered_df[
-                    filtered_df["note"].astype(str).apply(_is_violation_from_note)
-                ].copy()
-        elif str(risk_exposure) in ["0", "X"]:
-            if "note" in filtered_df.columns:
-                filtered_df = filtered_df[
-                    filtered_df["note"].astype(str).apply(_is_safe_from_note)
-                ].copy()
+    if risk_exposure and "is_violated" in filtered_df.columns:
+        risk_value = 1 if str(risk_exposure) in ["1", "O"] else 0
+        filtered_df = filtered_df[
+            pd.to_numeric(filtered_df["is_violated"], errors="coerce")
+            .fillna(0)
+            .astype(int) == risk_value
+        ].copy()
 
     return filtered_df
 
@@ -447,29 +437,27 @@ def get_analysis_kpis(df: pd.DataFrame) -> dict:
     top_task_type = "-"
     top_ppe = "-"
 
-    # time 컬럼이 비어 있으므로 현재는 값 없으면 - 유지
-    if "time" in df.columns:
-        ts = df["time"].astype(str).str.strip()
-        ts = ts[(ts != "") & (ts.str.lower() != "nan")]
+    if "time_slot" in df.columns:
+        ts = df["time_slot"].astype(str).str.strip()
+        ts = ts[(ts != "") & (ts.str.lower() != "nan") & (ts.str.lower() != "none")]
         if not ts.empty:
             top_time = ts.value_counts().idxmax()
 
     if "zone" in df.columns:
         zs = df["zone"].astype(str).str.strip()
-        zs = zs[(zs != "") & (zs.str.lower() != "nan")]
+        zs = zs[(zs != "") & (zs.str.lower() != "nan") & (zs.str.lower() != "none")]
         if not zs.empty:
             top_zone = zs.value_counts().idxmax()
 
     if "task_type" in df.columns:
         tasks = df["task_type"].astype(str).str.strip()
-        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan")]
+        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan") & (tasks.str.lower() != "none")]
         if not tasks.empty:
             top_task_type = tasks.value_counts().idxmax()
 
-    # PPE는 note에서 추출
-    if "note" in df.columns:
-        ppes = df["note"].astype(str).apply(_extract_ppe_from_note)
-        ppes = ppes[ppes != ""]
+    if "missed_ppe" in df.columns:
+        ppes = df["missed_ppe"].astype(str).str.strip()
+        ppes = ppes[(ppes != "") & (ppes.str.lower() != "nan") & (ppes.str.lower() != "none")]
         if not ppes.empty:
             top_ppe = ppes.value_counts().idxmax()
 
@@ -495,32 +483,34 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
     zone_chart = []
     task_chart = []
 
-    # time은 현재 데이터가 비어 있으므로 값 있는 경우만 그림
-    if "time" in df.columns:
-        ts = df["time"].astype(str).str.strip()
-        ts = ts[(ts != "") & (ts.str.lower() != "nan")]
+    if "time_slot" in df.columns:
+        ts = df["time_slot"].astype(str).str.strip()
+        ts = ts[(ts != "") & (ts.str.lower() != "nan") & (ts.str.lower() != "none")]
         if not ts.empty:
             counts = ts.value_counts()
-            time_chart = [{"label": str(k), "count": int(v)} for k, v in counts.items()]
+            order = {"오전": 1, "점심직후": 2, "오후": 3}
+            time_chart = [
+                {"label": str(k), "count": int(v)}
+                for k, v in sorted(counts.items(), key=lambda x: order.get(str(x[0]), 999))
+            ]
 
-    # PPE는 note에서 추출
-    if "note" in df.columns:
-        ppes = df["note"].astype(str).apply(_extract_ppe_from_note)
-        ppes = ppes[ppes != ""]
+    if "missed_ppe" in df.columns:
+        ppes = df["missed_ppe"].astype(str).str.strip()
+        ppes = ppes[(ppes != "") & (ppes.str.lower() != "nan") & (ppes.str.lower() != "none")]
         if not ppes.empty:
             counts = ppes.value_counts()
             ppe_chart = [{"label": str(k), "count": int(v)} for k, v in counts.items()]
 
     if "zone" in df.columns:
         zs = df["zone"].astype(str).str.strip()
-        zs = zs[(zs != "") & (zs.str.lower() != "nan")]
+        zs = zs[(zs != "") & (zs.str.lower() != "nan") & (zs.str.lower() != "none")]
         if not zs.empty:
             counts = zs.value_counts()
             zone_chart = [{"label": str(k), "count": int(v)} for k, v in counts.items()]
 
     if "task_type" in df.columns:
         tasks = df["task_type"].astype(str).str.strip()
-        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan")]
+        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan") & (tasks.str.lower() != "none")]
         if not tasks.empty:
             counts = tasks.value_counts()
             task_chart = [{"label": str(k), "count": int(v)} for k, v in counts.items()]
@@ -532,7 +522,6 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
         "task_chart": task_chart,
     }
 
-
 def get_recommend_action(df: pd.DataFrame) -> str:
     if df.empty:
         return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 PPE 점검을 유지하세요."
@@ -543,19 +532,19 @@ def get_recommend_action(df: pd.DataFrame) -> str:
 
     if "zone" in df.columns:
         zs = df["zone"].astype(str).str.strip()
-        zs = zs[(zs != "") & (zs.str.lower() != "nan")]
+        zs = zs[(zs != "") & (zs.str.lower() != "nan") & (zs.str.lower() != "none")]
         if not zs.empty:
             top_zone = zs.value_counts().idxmax()
 
     if "task_type" in df.columns:
         tasks = df["task_type"].astype(str).str.strip()
-        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan")]
+        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan") & (tasks.str.lower() != "none")]
         if not tasks.empty:
             top_task = tasks.value_counts().idxmax()
 
     if "missed_ppe" in df.columns:
         ppes = df["missed_ppe"].astype(str).str.strip()
-        ppes = ppes[(ppes != "") & (ppes.str.lower() != "nan")]
+        ppes = ppes[(ppes != "") & (ppes.str.lower() != "nan") & (ppes.str.lower() != "none")]
         if not ppes.empty:
             top_ppe = ppes.value_counts().idxmax()
 
