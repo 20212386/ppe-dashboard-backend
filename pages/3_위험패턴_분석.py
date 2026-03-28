@@ -204,18 +204,35 @@ def apply_beautiful_layout(fig, is_horizontal=False):
         plot_bgcolor="white",
         paper_bgcolor="white",
         showlegend=False,
-        bargap=0.5,
+        bargap=0.45,
     )
 
     if is_horizontal:
         fig.update_layout(
-            xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False),
-            yaxis=dict(showgrid=False, autorange="reversed")
+            xaxis=dict(
+                showgrid=True,
+                gridcolor="#f1f5f9",
+                zeroline=False,
+                title=""
+            ),
+            yaxis=dict(
+                showgrid=False,
+                title="",
+                autorange="reversed"
+            ),
         )
     else:
         fig.update_layout(
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False)
+            xaxis=dict(
+                showgrid=False,
+                title=""
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="#f1f5f9",
+                zeroline=False,
+                title=""
+            ),
         )
 
     return fig
