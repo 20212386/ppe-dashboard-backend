@@ -449,6 +449,8 @@ def get_analysis_kpis(df: pd.DataFrame) -> dict:
 
 
 def get_analysis_charts(df: pd.DataFrame) -> dict:
+    print("DEBUG COLUMNS:", df.columns.tolist())
+    print("DEBUG SAMPLE:", df.head(5).to_dict(orient="records"))
     if df.empty:
         return {
             "time_chart": [],
