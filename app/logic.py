@@ -320,6 +320,8 @@ def calculate_input_quality(df: pd.DataFrame) -> dict:
         len(df[
             (~df["worn"].isin(["O", "X"])) |
             (~df["risk_exposure"].isin(["O", "X"]))
+        ])
+    )
  # =========================
 # 페이지 3 분석 상세 (완전 통합 무적 버전 V2)
 # =========================
