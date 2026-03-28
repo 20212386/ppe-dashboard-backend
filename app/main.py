@@ -258,6 +258,11 @@ def analysis_detail(
         "kpis": kpis,
         "charts": charts,
         "recommend_action": recommend_action,
+
+            # 디버그용
+        "debug_columns": filtered_df.columns.tolist(),
+        "debug_preview": filtered_df.head(10).to_dict(orient="records"),
+
     }
 
 @app.get("/report/tbm")
