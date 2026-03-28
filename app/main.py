@@ -221,6 +221,7 @@ def save_manual_entry(entry: ManualEntry):
 def analysis_detail(
     start_date: str | None = None,
     end_date: str | None = None,
+    site: str | None = None,
     zone: str | None = None,
     task_type: str | None = None,
     ppe_type: str | None = None,
@@ -232,6 +233,7 @@ def analysis_detail(
         df,
         start_date=start_date,
         end_date=end_date,
+        site=site,
         zone=zone,
         task_type=task_type,
         ppe_type=ppe_type,
@@ -246,10 +248,11 @@ def analysis_detail(
         "filters": {
             "start_date": start_date,
             "end_date": end_date,
+            "site": site,
             "zone": zone,
             "task_type": task_type,
             "ppe_type": ppe_type,
-            "risk_exposure": risk_exposure,
+            "risk_exposure": risk_exposure
         },
         "count": int(len(filtered_df)),
         "kpis": kpis,
