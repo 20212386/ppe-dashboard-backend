@@ -116,8 +116,13 @@ with f8:
 st.markdown('</div>', unsafe_allow_html=True)
 
 params = {
-    "start_date": start_date or None, "end_date": end_date or None, "site": site or None,
-    "zone": zone or None, "task_type": task_type or None, "ppe_type": ppe_type or None, "risk_exposure": risk_exposure or None,
+    "start_date": start_date or None,
+    "end_date": end_date or None,
+    "site": site or None,
+    "zone": zone or None,
+    "task_type": task_type or None,
+    "ppe_type": ppe_type or None,
+    "risk_exposure": risk_exposure_param,
 }
 
 if run_analysis:
