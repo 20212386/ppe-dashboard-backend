@@ -286,7 +286,7 @@ with left:
             merged_df = pd.concat([current_df, normalized_df], ignore_index=True)
             save_data(merged_df)
             st.success("CSV 데이터가 기존 데이터에 추가 저장되었습니다.")
-            st.rerun()
+            st.experimental_rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -333,7 +333,7 @@ with left:
         merged_df = pd.concat([df, new_row], ignore_index=True)
         save_data(merged_df)
         st.success("수기 입력 데이터가 저장되었습니다.")
-        st.rerun()
+        st.experimental_rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
