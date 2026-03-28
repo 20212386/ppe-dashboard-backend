@@ -187,7 +187,11 @@ def calculate_data_summary(df: pd.DataFrame, today_str: str | None = None) -> di
 def calculate_quality_metrics(df: pd.DataFrame) -> dict:
     return calculate_input_quality(df)
 
-
+def get_input_preview(df: pd.DataFrame, n: int = 10) -> list[dict]:
+    if df.empty:
+        return []
+    return df.tail(n).iloc[::-1].fillna("").to_dict(orient="records")
+    
 def get_recent_preview(df: pd.DataFrame, n: int = 10) -> list[dict]:
     return get_input_preview(df, n)
 
