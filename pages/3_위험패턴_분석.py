@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import streamlit.components.v1 as components
 
 API_BASE = "https://ppe-dashboard-backend.onrender.com"
 
@@ -69,7 +70,7 @@ st.markdown("""
     padding: 22px 22px 18px 22px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
     border: 1px solid #f1f5f9;
-    min-height: 420px;
+    min-height: 320px;
 }
 .section-title {
     font-size: 28px;
@@ -197,26 +198,28 @@ def render_html_bar_chart(df: pd.DataFrame, color: str = "#3b82f6"):
         return
 
     max_count = max(int(df["count"].max()), 1)
-    html = ""
+    html = '<div style="margin-top:12px;">'
 
     for _, row in df.iterrows():
         label = str(row["label"])
         count = int(row["count"])
-        width = max((count / max_count) * 100, 6)
+        width = max((count / max_count) * 100, 8)
 
         html += f"""
-        <div class="bar-row">
-            <div class="bar-head">
-                <div class="bar-label">{label}</div>
-                <div class="bar-value">{count}</div>
+        <div style="margin-bottom:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:15px; font-weight:700; color:#334155;">{label}</span>
+                <span style="font-size:14px; font-weight:800; color:#0f172a;">{count}</span>
             </div>
-            <div class="bar-bg">
-                <div class="bar-fill" style="width:{width}%; background:{color};"></div>
+            <div style="width:100%; background:#eef2f7; height:16px; border-radius:999px; overflow:hidden;">
+                <div style="width:{width}%; background:{color}; height:16px; border-radius:999px;"></div>
             </div>
         </div>
         """
 
-    st.markdown(html, unsafe_allow_html=True)
+    html += "</div>"
+
+    st.components.v1.html(html, height=max(140, 52 * len(df)), scrolling=False)
 
 
 if "p3_analysis_data" not in st.session_state:
