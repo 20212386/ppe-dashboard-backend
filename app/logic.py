@@ -357,27 +357,34 @@ def filter_input_data(
 
     if start_date: filtered_df = filtered_df[filtered_df["date"] >= start_date]
     if end_date: filtered_df = filtered_df[filtered_df["date"] <= end_date]
-    if site and "site" in filtered_df.columns: 
-        filtered_df = filtered_df[filtered_df["site"].astype(str).str.contains(site, na=False)]
-    if zone and "zone" in filtered_df.columns: 
-        filtered_df = filtered_df[filtered_df["zone"].astype(str).str.contains(zone, na=False)]
-    if task_type and "task_type" in filtered_df.columns: 
-        filtered_df = filtered_df[filtered_df["task_type"].astype(str).str.contains(task_type, na=False)]
+    if site and "site" in filtered_df.columns:
+    filtered_df = filtered_df[
+        filtered_df["site"].astype(str).str.strip() == site
+    ].copy()
+
+    if zone and "zone" in filtered_df.columns:
+        filtered_df = filtered_df[
+            filtered_df["zone"].astype(str).str.strip() == zone
+            ].copy()
+
+    if task_type and "task_type" in filtered_df.columns:
+        filtered_df = filtered_df[
+            filtered_df["task_type"].astype(str).str.strip() == task_type
+            ].copy()
     
     if ppe_type:
-        mask = pd.Series(False, index=filtered_df.index)
         if "missed_ppe" in filtered_df.columns:
-            mask = mask | filtered_df["missed_ppe"].astype(str).str.contains(ppe_type, na=False)
-        if "ppe_type" in filtered_df.columns:
-            mask = mask | filtered_df["ppe_type"].astype(str).str.contains(ppe_type, na=False)
-        filtered_df = filtered_df[mask]
+            filtered_df = filtered_df[
+                filtered_df["missed_ppe"].astype(str).str.strip() == ppe_type
+                ].copy()
 
     if risk_exposure:
-        if "risk_exposure" in filtered_df.columns:
-            val1 = "O" if risk_exposure == "O" else "X"
-            val2 = "1" if risk_exposure == "O" else "0"
-            filtered_df = filtered_df[filtered_df["risk_exposure"].astype(str).str.strip().isin([val1, val2])]
+    risk_value = 1 if risk_exposure == "O" else 0
 
+    if "is_violated" in filtered_df.columns:
+        filtered_df = filtered_df[
+            pd.to_numeric(filtered_df["is_violated"], errors="coerce").fillna(0).astype(int) == risk_value
+        ].copy()
     return filtered_df.copy()
 
 def _get_violation_series_p3(df: pd.DataFrame) -> pd.Series:
