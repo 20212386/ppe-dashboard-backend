@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import matplotlib.pyplot as plt
 
 API_BASE = "https://ppe-dashboard-backend.onrender.com"
 
@@ -140,6 +141,34 @@ def fetch_analysis_data(params: dict):
         return None
 
 
+def render_matplotlib_bar(df, horizontal=False):
+    fig, ax = plt.subplots(figsize=(6, 3.2))
+
+    labels = df["label"].astype(str).tolist()
+    values = pd.to_numeric(df["count"], errors="coerce").fillna(0).tolist()
+
+    if horizontal:
+        ax.barh(labels, values)
+        ax.invert_yaxis()
+        ax.set_xlabel("")
+        ax.set_ylabel("")
+        ax.grid(axis="x", linestyle="--", alpha=0.3)
+    else:
+        ax.bar(labels, values)
+        ax.set_xlabel("")
+        ax.set_ylabel("")
+        ax.grid(axis="y", linestyle="--", alpha=0.3)
+
+    ax.set_facecolor("white")
+    fig.patch.set_facecolor("white")
+
+    for spine in ["top", "right"]:
+        ax.spines[spine].set_visible(False)
+
+    st.pyplot(fig, use_container_width=True)
+    plt.close(fig)
+
+
 if "p3_analysis_data" not in st.session_state:
     st.session_state["p3_analysis_data"] = None
 
@@ -206,9 +235,9 @@ ppe_df = pd.DataFrame(charts.get("ppe_chart", []))
 zone_df = pd.DataFrame(charts.get("zone_chart", []))
 task_df = pd.DataFrame(charts.get("task_chart", []))
 
-for df_name in [time_df, ppe_df, zone_df, task_df]:
-    if not df_name.empty and "count" in df_name.columns:
-        df_name["count"] = pd.to_numeric(df_name["count"], errors="coerce").fillna(0)
+for tmp_df in [time_df, ppe_df, zone_df, task_df]:
+    if not tmp_df.empty and "count" in tmp_df.columns:
+        tmp_df["count"] = pd.to_numeric(tmp_df["count"], errors="coerce").fillna(0)
 
 top_time = kpis.get("top_time") or "-"
 top_zone = kpis.get("top_zone") or "-"
@@ -240,8 +269,7 @@ with r1c1:
     else:
         chart_data = time_df.copy()
         chart_data["count"] = pd.to_numeric(chart_data["count"], errors="coerce").fillna(0)
-        chart_data = chart_data.set_index("label")[["count"]]
-        st.bar_chart(chart_data, use_container_width=True)
+        render_matplotlib_bar(chart_data, horizontal=False)
 
         st.markdown(
             f'<div class="insight-box" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a;">패턴 해석: 가장 위반이 집중된 시간대는 <b>{top_time}</b>입니다.</div>',
@@ -260,8 +288,7 @@ with r1c2:
     else:
         chart_data = ppe_df.copy()
         chart_data["count"] = pd.to_numeric(chart_data["count"], errors="coerce").fillna(0)
-        chart_data = chart_data.set_index("label")[["count"]]
-        st.bar_chart(chart_data, use_container_width=True)
+        render_matplotlib_bar(chart_data, horizontal=False)
 
         st.markdown(
             f'<div class="insight-box" style="background:#faf5ff; border:1px solid #e9d5ff; color:#6b21a8;">패턴 해석: 가장 많이 누락된 PPE는 <b>{top_ppe}</b>입니다.</div>',
@@ -282,8 +309,7 @@ with r2c1:
     else:
         chart_data = zone_df.copy()
         chart_data["count"] = pd.to_numeric(chart_data["count"], errors="coerce").fillna(0)
-        chart_data = chart_data.set_index("label")[["count"]]
-        st.bar_chart(chart_data, use_container_width=True)
+        render_matplotlib_bar(chart_data, horizontal=True)
 
         st.markdown(
             f'<div class="insight-box" style="background:#fff7ed; border:1px solid #fed7aa; color:#9a3412;">패턴 해석: 가장 취약한 구역은 <b>{top_zone}</b>입니다.</div>',
@@ -302,8 +328,7 @@ with r2c2:
     else:
         chart_data = task_df.copy()
         chart_data["count"] = pd.to_numeric(chart_data["count"], errors="coerce").fillna(0)
-        chart_data = chart_data.set_index("label")[["count"]]
-        st.bar_chart(chart_data, use_container_width=True)
+        render_matplotlib_bar(chart_data, horizontal=True)
 
         st.markdown(
             f'<div class="insight-box" style="background:#fefce8; border:1px solid #fde68a; color:#854d0e;">패턴 해석: 반복 위험 작업유형은 <b>{top_task}</b>입니다.</div>',
