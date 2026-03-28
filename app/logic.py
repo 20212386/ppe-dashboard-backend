@@ -367,21 +367,26 @@ def filter_input_data(
 
     if start_date: filtered_df = filtered_df[filtered_df["date"] >= start_date]
     if end_date: filtered_df = filtered_df[filtered_df["date"] <= end_date]
-    if site and "site" in filtered_df.columns: filtered_df = filtered_df[filtered_df["site"] == site]
-    if zone and "zone" in filtered_df.columns: filtered_df = filtered_df[filtered_df["zone"] == zone]
-    if task_type and "task_type" in filtered_df.columns: filtered_df = filtered_df[filtered_df["task_type"] == task_type]
+    
+    # 💡 일치(==) 대신 포함(contains)으로 변경해서 띄어쓰기나 콤마 섞여있어도 다 찾아냄!
+    if site and "site" in filtered_df.columns: 
+        filtered_df = filtered_df[filtered_df["site"].astype(str).str.contains(site, na=False)]
+    if zone and "zone" in filtered_df.columns: 
+        filtered_df = filtered_df[filtered_df["zone"].astype(str).str.contains(zone, na=False)]
+    if task_type and "task_type" in filtered_df.columns: 
+        filtered_df = filtered_df[filtered_df["task_type"].astype(str).str.contains(task_type, na=False)]
     
     if ppe_type:
         if "missed_ppe" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["missed_ppe"] == ppe_type]
+            filtered_df = filtered_df[filtered_df["missed_ppe"].astype(str).str.contains(ppe_type, na=False)]
         elif "ppe_type" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["ppe_type"] == ppe_type]
+            filtered_df = filtered_df[filtered_df["ppe_type"].astype(str).str.contains(ppe_type, na=False)]
 
     if risk_exposure:
         if "risk_exposure" in filtered_df.columns:
             val1 = "O" if risk_exposure == "O" else "X"
-            val2 = 1 if risk_exposure == "O" else 0
-            filtered_df = filtered_df[filtered_df["risk_exposure"].isin([val1, val2, str(val2)])]
+            val2 = "1" if risk_exposure == "O" else "0"
+            filtered_df = filtered_df[filtered_df["risk_exposure"].astype(str).str.strip().isin([val1, val2])]
 
     return filtered_df.copy()
 
