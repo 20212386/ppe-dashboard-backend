@@ -8,8 +8,15 @@ DATA_DIR = BASE_DIR / "data"
 INPUT_FILE_PATH = DATA_DIR / "input_logs.csv"
 
 INPUT_REQUIRED_COLUMNS = [
-    "date", "time", "worker_id", "team", "zone", "task_type",
-    "ppe_type", "worn", "risk_exposure", "note"
+    "date",
+    "time_slot",
+    "site",
+    "zone",
+    "task_type",
+    "missed_ppe",
+    "is_violated",
+    "team",
+    "note",
 ]
 
 
@@ -212,50 +219,75 @@ def load_input_logs() -> pd.DataFrame:
 
 def normalize_input_df(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    df.columns = [str(c).strip() for c in df.columns]
 
-    # 컬럼명 정리
     rename_map = {
         "Date": "date",
-        "Time": "time",
-        "Worker_ID": "worker_id",
-        "WorkerID": "worker_id",
-        "Team": "team",
+        "date": "date",
+
+        "Time_Slot": "time_slot",
+        "time_slot": "time_slot",
+        "TimeSlot": "time_slot",
+
+        "Site": "site",
+        "site": "site",
+
         "Zone": "zone",
+        "zone": "zone",
+
         "Task_Type": "task_type",
         "TaskType": "task_type",
-        "PPE_Type": "ppe_type",
-        "PPEType": "ppe_type",
-        "Worn": "worn",
-        "Risk_Exposure": "risk_exposure",
-        "RiskExposure": "risk_exposure",
+        "task_type": "task_type",
+
+        "Missed_PPE": "missed_ppe",
+        "MissedPPE": "missed_ppe",
+        "missed_ppe": "missed_ppe",
+        "PPE_Type": "missed_ppe",
+        "PPEType": "missed_ppe",
+
+        "Is_Violated": "is_violated",
+        "IsViolated": "is_violated",
+        "is_violated": "is_violated",
+        "Risk_Exposure": "is_violated",
+        "RiskExposure": "is_violated",
+
+        "Team": "team",
+        "team": "team",
+
         "Note": "note",
+        "note": "note",
     }
+
     df = df.rename(columns=rename_map)
 
-    # 누락 컬럼 채우기
     for col in INPUT_REQUIRED_COLUMNS:
         if col not in df.columns:
             df[col] = ""
 
-    # 순서 맞추기
     df = df[INPUT_REQUIRED_COLUMNS]
 
-    # 문자열 정리
-    for col in INPUT_REQUIRED_COLUMNS:
+    for col in ["date", "time_slot", "site", "zone", "task_type", "missed_ppe", "team", "note"]:
         df[col] = df[col].fillna("").astype(str).str.strip()
 
-    # 값 통일
-    df["worn"] = df["worn"].replace({
-        "착용": "O", "미착용": "X",
-        "o": "O", "x": "X"
-    }).str.upper()
+    if "is_violated" in df.columns:
+        df["is_violated"] = (
+            df["is_violated"]
+            .fillna(0)
+            .astype(str)
+            .str.strip()
+            .replace({
+                "O": "1",
+                "X": "0",
+                "o": "1",
+                "x": "0",
+                "True": "1",
+                "False": "0",
+                "true": "1",
+                "false": "0",
+            })
+        )
+        df["is_violated"] = pd.to_numeric(df["is_violated"], errors="coerce").fillna(0).astype(int)
 
-    df["risk_exposure"] = df["risk_exposure"].replace({
-        "노출": "O", "비노출": "X",
-        "o": "O", "x": "X"
-    }).str.upper()
-
-    # 날짜 형식 최대한 통일
     if not df.empty:
         parsed = pd.to_datetime(df["date"], errors="coerce")
         df["date"] = parsed.dt.strftime("%Y-%m-%d").fillna(df["date"])
