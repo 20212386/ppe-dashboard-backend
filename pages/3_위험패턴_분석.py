@@ -83,7 +83,7 @@ st.markdown("""
     border: 1px solid #e2e8f0;
     border-radius: 20px;
     padding: 18px 20px;
-    min-height: 138px;
+    height: 140px; /* 💡 min-height를 지우고 height로 완전 고정! */
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
 }
 .metric-top {
@@ -97,6 +97,9 @@ st.markdown("""
     font-size: 0.9rem;
     margin-bottom: 10px;
     font-weight: 700;
+    white-space: nowrap; /* 💡 글자 두 줄로 넘어가는 거 금지 */
+    overflow: hidden;    /* 💡 튀어나온 글자 숨기기 */
+    text-overflow: ellipsis; /* 💡 길면 '...' 으로 예쁘게 자르기 */
 }
 .metric-value {
     color: #0f172a;
