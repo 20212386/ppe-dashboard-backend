@@ -213,4 +213,4 @@ with r1c2:
             marker=dict(color=colors, line=dict(color=lines, width=1.5)), # 💡 PPE별로 예쁜 컬러 매핑
             hovertemplate="%{x}: %{y}건<extra></extra>"
         ))
-        st.plotly_chart(apply_beautiful_layout(fig_ppe),
+        st.plotly_chart(apply_beautiful_layout(fig_ppe)),
