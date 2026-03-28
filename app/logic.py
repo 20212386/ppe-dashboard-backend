@@ -191,7 +191,7 @@ def get_input_preview(df: pd.DataFrame, n: int = 10) -> list[dict]:
     if df.empty:
         return []
     return df.tail(n).iloc[::-1].fillna("").to_dict(orient="records")
-    
+
 def get_recent_preview(df: pd.DataFrame, n: int = 10) -> list[dict]:
     return get_input_preview(df, n)
 
@@ -326,6 +326,19 @@ def calculate_input_quality(df: pd.DataFrame) -> dict:
             (~df["risk_exposure"].isin(["O", "X"]))
         ])
     )
+def append_manual_entry(entry: dict) -> dict:
+    try:
+        if os.path.exists("data/input_logs.csv"):
+            df = pd.read_csv("data/input_logs.csv")
+        else:
+            df = pd.DataFrame(columns=INPUT_REQUIRED_COLUMNS)
+            
+        new_row = pd.DataFrame([entry])
+        df = pd.concat([df, new_row], ignore_index=True)
+        df.to_csv("data/input_logs.csv", index=False)
+        return {"status": "success", "message": "수동 입력 데이터가 저장되었습니다."}
+    except Exception as e:
+        return {"status": "error", "message": f"저장 실패: {str(e)}"}
  # =========================
 # 페이지 3 분석 상세 (완전 통합 무적 버전 V2)
 # =========================
