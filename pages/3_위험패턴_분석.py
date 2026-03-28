@@ -146,7 +146,35 @@ else:
     count, kpis, charts, recommend_action = 0, {}, {}, "필터를 설정한 뒤 '분석 실행' 버튼을 눌러주세요."
 
 time_df = pd.DataFrame(charts.get("time_chart", []))
+if not time_df.empty:
+    time_df["count"] = pd.to_numeric(time_df["count"], errors="coerce").fillna(0)
+
+    fig_time = go.Figure(
+        go.Bar(
+            x=time_df["label"].astype(str),
+            y=time_df["count"],
+            marker=dict(color="rgba(59,130,246,0.75)"),
+        )
+    )
+    fig_time = apply_beautiful_layout(fig_time)
+    st.plotly_chart(fig_time, use_container_width=True)
+else:
+    render_empty_chart_message("조건에 맞는 데이터가 없습니다.")
 ppe_df = pd.DataFrame(charts.get("ppe_chart", []))
+if not ppe_df.empty:
+    ppe_df["count"] = pd.to_numeric(ppe_df["count"], errors="coerce").fillna(0)
+
+    fig_ppe = go.Figure(
+        go.Bar(
+            x=ppe_df["label"].astype(str),
+            y=ppe_df["count"],
+            marker=dict(color="rgba(139,92,246,0.75)"),
+        )
+    )
+    fig_ppe = apply_beautiful_layout(fig_ppe)
+    st.plotly_chart(fig_ppe, use_container_width=True)
+else:
+    render_empty_chart_message("조건에 맞는 데이터가 없습니다.")
 zone_df = pd.DataFrame(charts.get("zone_chart", []))
 task_df = pd.DataFrame(charts.get("task_chart", []))
 
@@ -171,24 +199,25 @@ st.markdown(f'<div class="small-stat">현재 필터 조건에 맞는 데이터 �
 # =========================
 def apply_beautiful_layout(fig, is_horizontal=False):
     fig.update_layout(
-        height=320, margin=dict(l=10, r=10, t=20, b=10),
-        plot_bgcolor="white", paper_bgcolor="white", showlegend=False,
-        bargap=0.5, # 💡 뚱뚱이 방지 (막대 사이 간격 넓히기)
+        height=320,
+        margin=dict(l=10, r=10, t=20, b=10),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        showlegend=False,
+        bargap=0.5,
     )
+
     if is_horizontal:
         fig.update_layout(
-            xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8")),
-            yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#334155"))
+            xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False),
+            yaxis=dict(showgrid=False, autorange="reversed")
         )
     else:
         fig.update_layout(
-            xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")),
-            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"))
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False)
         )
-    try:
-        fig.update_layout(barcornerradius=8) # 💡 모서리 동글동글하게!
-    except:
-        pass
+
     return fig
 
 # =========================
