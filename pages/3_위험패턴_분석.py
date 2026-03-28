@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import requests
-import matplotlib.pyplot as plt
 
 API_BASE = "https://ppe-dashboard-backend.onrender.com"
 
@@ -141,32 +140,61 @@ def fetch_analysis_data(params: dict):
         return None
 
 
-def render_matplotlib_bar(df, horizontal=False):
-    fig, ax = plt.subplots(figsize=(6, 3.2))
+def _safe_counts_df(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame(columns=["label", "count"])
 
-    labels = df["label"].astype(str).tolist()
-    values = pd.to_numeric(df["count"], errors="coerce").fillna(0).tolist()
+    out = df.copy()
 
-    if horizontal:
-        ax.barh(labels, values)
-        ax.invert_yaxis()
-        ax.set_xlabel("")
-        ax.set_ylabel("")
-        ax.grid(axis="x", linestyle="--", alpha=0.3)
-    else:
-        ax.bar(labels, values)
-        ax.set_xlabel("")
-        ax.set_ylabel("")
-        ax.grid(axis="y", linestyle="--", alpha=0.3)
+    if "label" not in out.columns:
+        out["label"] = ""
+    if "count" not in out.columns:
+        out["count"] = 0
 
-    ax.set_facecolor("white")
-    fig.patch.set_facecolor("white")
+    out["label"] = out["label"].fillna("").astype(str)
+    out["count"] = pd.to_numeric(out["count"], errors="coerce").fillna(0).astype(int)
 
-    for spine in ["top", "right"]:
-        ax.spines[spine].set_visible(False)
+    out = out[out["label"] != ""].reset_index(drop=True)
+    return out
 
-    st.pyplot(fig, use_container_width=True)
-    plt.close(fig)
+
+def render_html_bar_chart(df: pd.DataFrame, color: str = "#3b82f6"):
+    df = _safe_counts_df(df)
+
+    if df.empty:
+        render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
+        return
+
+    max_count = max(int(df["count"].max()), 1)
+
+    rows = []
+    for _, row in df.iterrows():
+        label = str(row["label"])
+        count = int(row["count"])
+        width = max((count / max_count) * 100, 6)
+
+        rows.append(
+            f"""
+            <div style="margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:10px;">
+                    <div style="font-size:15px; font-weight:700; color:#334155; word-break:keep-all;">{label}</div>
+                    <div style="font-size:14px; font-weight:800; color:#0f172a;">{count}</div>
+                </div>
+                <div style="width:100%; height:14px; background:#eef2f7; border-radius:999px; overflow:hidden;">
+                    <div style="width:{width}%; height:14px; background:{color}; border-radius:999px;"></div>
+                </div>
+            </div>
+            """
+        )
+
+    st.markdown(
+        f"""
+        <div style="margin-top:8px;">
+            {''.join(rows)}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 if "p3_analysis_data" not in st.session_state:
@@ -181,15 +209,19 @@ f7, f8 = st.columns([1, 2])
 
 with f1:
     start_date = st.text_input("시작 날짜", value="2026-03-01")
+
 with f2:
     end_date = st.text_input("종료 날짜", value="2026-03-31")
+
 with f3:
     site = st.selectbox("현장", ["", "현장1", "현장2", "현장3"])
 
 with f4:
     zone = st.selectbox("작업구역", ["", "고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"])
+
 with f5:
     task_type = st.selectbox("작업유형", ["", "고소작업", "절단작업", "자재운반", "설비점검"])
+
 with f6:
     ppe_type = st.selectbox("PPE 종류", ["", "장갑", "안전모", "랜야드"])
 
@@ -230,14 +262,10 @@ else:
     charts = {}
     recommend_action = "필터를 설정한 뒤 분석 실행 버튼을 눌러주세요."
 
-time_df = pd.DataFrame(charts.get("time_chart", []))
-ppe_df = pd.DataFrame(charts.get("ppe_chart", []))
-zone_df = pd.DataFrame(charts.get("zone_chart", []))
-task_df = pd.DataFrame(charts.get("task_chart", []))
-
-for tmp_df in [time_df, ppe_df, zone_df, task_df]:
-    if not tmp_df.empty and "count" in tmp_df.columns:
-        tmp_df["count"] = pd.to_numeric(tmp_df["count"], errors="coerce").fillna(0)
+time_df = _safe_counts_df(pd.DataFrame(charts.get("time_chart", [])))
+ppe_df = _safe_counts_df(pd.DataFrame(charts.get("ppe_chart", [])))
+zone_df = _safe_counts_df(pd.DataFrame(charts.get("zone_chart", [])))
+task_df = _safe_counts_df(pd.DataFrame(charts.get("task_chart", [])))
 
 top_time = kpis.get("top_time") or "-"
 top_zone = kpis.get("top_zone") or "-"
@@ -248,10 +276,13 @@ c1, c2, c3, c4 = st.columns(4)
 
 with c1:
     render_metric_card("가장 위험한 시간대", top_time, "위반 집중", "#ef4444", "#fef2f2", "#b91c1c", "#fff1f2", "⏰")
+
 with c2:
     render_metric_card("가장 취약한 구역", top_zone, "위험 패턴 상위", "#f97316", "#fff7ed", "#c2410c", "#fff7ed", "📍")
+
 with c3:
     render_metric_card("반복 위험 작업유형", top_task, "반복 분석", "#eab308", "#fefce8", "#a16207", "#fefce8", "📉")
+
 with c4:
     render_metric_card("가장 많이 누락된 PPE", top_ppe, "누락 상위", "#a855f7", "#faf5ff", "#7e22ce", "#faf5ff", "👜")
 
@@ -260,17 +291,17 @@ st.markdown(f'<div class="small-stat">현재 필터 조건에 맞는 데이터 �
 r1c1, r1c2 = st.columns(2)
 
 with r1c1:
-    st.markdown('<div class="section-card"><div class="section-title">시간대별 위반 건수</div><div class="section-sub">시간대별 반복 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-card"><div class="section-title">시간대별 위반 건수</div><div class="section-sub">시간대별 반복 위반 분포를 확인합니다</div>',
+        unsafe_allow_html=True
+    )
 
     if analysis_data is None:
         render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르세요.")
     elif time_df.empty:
         render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
     else:
-        chart_data = time_df.copy()
-        chart_data["count"] = pd.to_numeric(chart_data["count"], errors="coerce").fillna(0)
-        render_matplotlib_bar(chart_data, horizontal=False)
-
+        render_html_bar_chart(time_df, color="#3b82f6")
         st.markdown(
             f'<div class="insight-box" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a;">패턴 해석: 가장 위반이 집중된 시간대는 <b>{top_time}</b>입니다.</div>',
             unsafe_allow_html=True
@@ -279,17 +310,17 @@ with r1c1:
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r1c2:
-    st.markdown('<div class="section-card"><div class="section-title">PPE별 위반 건수</div><div class="section-sub">누락 빈도가 높은 보호구를 확인합니다</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-card"><div class="section-title">PPE별 위반 건수</div><div class="section-sub">누락 빈도가 높은 보호구를 확인합니다</div>',
+        unsafe_allow_html=True
+    )
 
     if analysis_data is None:
         render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르세요.")
     elif ppe_df.empty:
         render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
     else:
-        chart_data = ppe_df.copy()
-        chart_data["count"] = pd.to_numeric(chart_data["count"], errors="coerce").fillna(0)
-        render_matplotlib_bar(chart_data, horizontal=False)
-
+        render_html_bar_chart(ppe_df, color="#8b5cf6")
         st.markdown(
             f'<div class="insight-box" style="background:#faf5ff; border:1px solid #e9d5ff; color:#6b21a8;">패턴 해석: 가장 많이 누락된 PPE는 <b>{top_ppe}</b>입니다.</div>',
             unsafe_allow_html=True
@@ -300,17 +331,17 @@ with r1c2:
 r2c1, r2c2 = st.columns(2)
 
 with r2c1:
-    st.markdown('<div class="section-card"><div class="section-title">구역별 위반 건수</div><div class="section-sub">어느 작업구역에 위반이 몰리는지 봅니다</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-card"><div class="section-title">구역별 위반 건수</div><div class="section-sub">어느 작업구역에 위반이 몰리는지 봅니다</div>',
+        unsafe_allow_html=True
+    )
 
     if analysis_data is None:
         render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르세요.")
     elif zone_df.empty:
         render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
     else:
-        chart_data = zone_df.copy()
-        chart_data["count"] = pd.to_numeric(chart_data["count"], errors="coerce").fillna(0)
-        render_matplotlib_bar(chart_data, horizontal=True)
-
+        render_html_bar_chart(zone_df, color="#f97316")
         st.markdown(
             f'<div class="insight-box" style="background:#fff7ed; border:1px solid #fed7aa; color:#9a3412;">패턴 해석: 가장 취약한 구역은 <b>{top_zone}</b>입니다.</div>',
             unsafe_allow_html=True
@@ -319,17 +350,17 @@ with r2c1:
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r2c2:
-    st.markdown('<div class="section-card"><div class="section-title">작업유형별 위반 건수</div><div class="section-sub">반복 위반이 몰리는 작업유형을 확인합니다</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-card"><div class="section-title">작업유형별 위반 건수</div><div class="section-sub">반복 위반이 몰리는 작업유형을 확인합니다</div>',
+        unsafe_allow_html=True
+    )
 
     if analysis_data is None:
         render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르세요.")
     elif task_df.empty:
         render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
     else:
-        chart_data = task_df.copy()
-        chart_data["count"] = pd.to_numeric(chart_data["count"], errors="coerce").fillna(0)
-        render_matplotlib_bar(chart_data, horizontal=True)
-
+        render_html_bar_chart(task_df, color="#eab308")
         st.markdown(
             f'<div class="insight-box" style="background:#fefce8; border:1px solid #fde68a; color:#854d0e;">패턴 해석: 반복 위험 작업유형은 <b>{top_task}</b>입니다.</div>',
             unsafe_allow_html=True
