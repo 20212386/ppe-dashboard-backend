@@ -98,6 +98,37 @@ st.markdown("""
     font-size: 15px;
     font-weight: 600;
 }
+.bar-row {
+    margin-bottom: 16px;
+}
+.bar-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+.bar-label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #334155;
+}
+.bar-value {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.bar-bg {
+    width: 100%;
+    height: 14px;
+    background: #eef2f7;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.bar-fill {
+    height: 14px;
+    border-radius: 999px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -107,7 +138,7 @@ def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, ico
         f"""
         <div class="metric-card" style="border-left:6px solid {accent};">
             <div class="metric-top">
-                <div style="width: 72%;">
+                <div style="width:72%;">
                     <div class="metric-label">{title}</div>
                     <div class="metric-value">{value}</div>
                     <span class="metric-badge" style="background:{badge_bg}; color:{badge_fg};">{badge_text}</span>
@@ -166,35 +197,26 @@ def render_html_bar_chart(df: pd.DataFrame, color: str = "#3b82f6"):
         return
 
     max_count = max(int(df["count"].max()), 1)
+    html = ""
 
-    rows = []
     for _, row in df.iterrows():
         label = str(row["label"])
         count = int(row["count"])
         width = max((count / max_count) * 100, 6)
 
-        rows.append(
-            f"""
-            <div style="margin-bottom:16px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:10px;">
-                    <div style="font-size:15px; font-weight:700; color:#334155; word-break:keep-all;">{label}</div>
-                    <div style="font-size:14px; font-weight:800; color:#0f172a;">{count}</div>
-                </div>
-                <div style="width:100%; height:14px; background:#eef2f7; border-radius:999px; overflow:hidden;">
-                    <div style="width:{width}%; height:14px; background:{color}; border-radius:999px;"></div>
-                </div>
+        html += f"""
+        <div class="bar-row">
+            <div class="bar-head">
+                <div class="bar-label">{label}</div>
+                <div class="bar-value">{count}</div>
             </div>
-            """
-        )
-
-    st.markdown(
-        f"""
-        <div style="margin-top:8px;">
-            {''.join(rows)}
+            <div class="bar-bg">
+                <div class="bar-fill" style="width:{width}%; background:{color};"></div>
+            </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """
+
+    st.markdown(html, unsafe_allow_html=True)
 
 
 if "p3_analysis_data" not in st.session_state:
@@ -276,13 +298,10 @@ c1, c2, c3, c4 = st.columns(4)
 
 with c1:
     render_metric_card("가장 위험한 시간대", top_time, "위반 집중", "#ef4444", "#fef2f2", "#b91c1c", "#fff1f2", "⏰")
-
 with c2:
     render_metric_card("가장 취약한 구역", top_zone, "위험 패턴 상위", "#f97316", "#fff7ed", "#c2410c", "#fff7ed", "📍")
-
 with c3:
     render_metric_card("반복 위험 작업유형", top_task, "반복 분석", "#eab308", "#fefce8", "#a16207", "#fefce8", "📉")
-
 with c4:
     render_metric_card("가장 많이 누락된 PPE", top_ppe, "누락 상위", "#a855f7", "#faf5ff", "#7e22ce", "#faf5ff", "👜")
 
