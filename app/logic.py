@@ -350,7 +350,7 @@ def append_manual_entry(row: dict) -> None:
 
 
 # =========================
-# 페이지 3 분석 상세 (최신 복구 버전)
+# 페이지 3 분석 상세 (초강력 에러 방어 버전)
 # =========================
 def filter_input_data(
     df: pd.DataFrame,
@@ -362,78 +362,74 @@ def filter_input_data(
     ppe_type: str | None = None,
     risk_exposure: str | None = None,
 ) -> pd.DataFrame:
-    if df.empty:
-        return df.copy()
-
+    if df.empty: return df.copy()
     filtered_df = df.copy()
 
-    if start_date:
-        filtered_df = filtered_df[filtered_df["date"] >= start_date]
-    if end_date:
-        filtered_df = filtered_df[filtered_df["date"] <= end_date]
-    if site and "site" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["site"] == site]
-    if zone and "zone" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["zone"] == zone]
-    if task_type and "task_type" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["task_type"] == task_type]
+    if start_date: filtered_df = filtered_df[filtered_df["date"] >= start_date]
+    if end_date: filtered_df = filtered_df[filtered_df["date"] <= end_date]
+    if site and "site" in filtered_df.columns: filtered_df = filtered_df[filtered_df["site"] == site]
+    if zone and "zone" in filtered_df.columns: filtered_df = filtered_df[filtered_df["zone"] == zone]
+    if task_type and "task_type" in filtered_df.columns: filtered_df = filtered_df[filtered_df["task_type"] == task_type]
     
-    # 💡 옛날 ppe_type 대신 missed_ppe로 매핑
-    if ppe_type and "missed_ppe" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["missed_ppe"] == ppe_type]
-    
-    # 💡 위험노출은 데이터가 O/X 또는 1/0일 수 있으니 유연하게 처리
-    if risk_exposure and "is_violated" in filtered_df.columns:
-        val = 1 if risk_exposure == "O" else 0
-        filtered_df = filtered_df[filtered_df["is_violated"] == val]
+    # ppe_type 필터 (missed_ppe 또는 ppe_type 모두 호환)
+    if ppe_type:
+        if "missed_ppe" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["missed_ppe"] == ppe_type]
+        elif "ppe_type" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["ppe_type"] == ppe_type]
+
+    # risk_exposure 필터
+    if risk_exposure:
+        if "risk_exposure" in filtered_df.columns:
+            val = "O" if risk_exposure == "O" else "X"
+            filtered_df = filtered_df[filtered_df["risk_exposure"] == val]
 
     return filtered_df.copy()
 
+def _get_violated_df_p3(df: pd.DataFrame) -> pd.DataFrame:
+    """컬럼명이 뭐든간에 위반 데이터만 쏙 뽑아내는 마법의 함수"""
+    if df.empty: return df
+    if "is_violated" in df.columns:
+        v = pd.to_numeric(df["is_violated"], errors="coerce").fillna(0)
+        if v.sum() > 0: return df[v == 1].copy()
+    if "worn" in df.columns:
+        return df[df["worn"].astype(str).str.strip().str.upper() == "X"].copy()
+    return pd.DataFrame(columns=df.columns)
+
+def _get_ppe_col(df: pd.DataFrame) -> str:
+    if "missed_ppe" in df.columns: return "missed_ppe"
+    if "ppe_type" in df.columns: return "ppe_type"
+    return ""
 
 def get_analysis_kpis(df: pd.DataFrame) -> dict:
-    if "is_violated" not in df.columns:
-        return {"top_time": "-", "top_zone": "-", "top_task_type": "-", "top_ppe": "-"}
-
-    # 💡 문자열, 숫자 상관없이 1인 것(위반)만 발라내기
-    is_viol = pd.to_numeric(df["is_violated"], errors="coerce").fillna(0) == 1
-    violated_df = df[is_viol].copy()
-
+    violated_df = _get_violated_df_p3(df)
     if violated_df.empty:
         return {"top_time": "-", "top_zone": "-", "top_task_type": "-", "top_ppe": "-"}
 
-    top_time = violated_df["time_slot"].value_counts().idxmax() if "time_slot" in violated_df.columns and not violated_df["time_slot"].dropna().empty else "-"
+    top_time = violated_df["time"].astype(str).str[:2].value_counts().idxmax() + "시" if "time" in violated_df.columns and not violated_df["time"].dropna().empty else "-"
     top_zone = violated_df["zone"].value_counts().idxmax() if "zone" in violated_df.columns and not violated_df["zone"].dropna().empty else "-"
     top_task = violated_df["task_type"].value_counts().idxmax() if "task_type" in violated_df.columns and not violated_df["task_type"].dropna().empty else "-"
-    top_ppe = violated_df["missed_ppe"].value_counts().idxmax() if "missed_ppe" in violated_df.columns and not violated_df["missed_ppe"].dropna().empty else "-"
+    
+    ppe_col = _get_ppe_col(violated_df)
+    top_ppe = violated_df[ppe_col].value_counts().idxmax() if ppe_col and not violated_df[ppe_col].dropna().empty else "-"
 
-    return {
-        "top_time": top_time,
-        "top_zone": top_zone,
-        "top_task_type": top_task,
-        "top_ppe": top_ppe,
-    }
-
+    return {"top_time": top_time, "top_zone": top_zone, "top_task_type": top_task, "top_ppe": top_ppe}
 
 def get_analysis_charts(df: pd.DataFrame) -> dict:
-    if "is_violated" not in df.columns:
-        return {"time_chart": [], "ppe_chart": [], "zone_chart": [], "task_chart": []}
-
-    is_viol = pd.to_numeric(df["is_violated"], errors="coerce").fillna(0) == 1
-    violated_df = df[is_viol].copy()
-
+    violated_df = _get_violated_df_p3(df)
     if violated_df.empty:
         return {"time_chart": [], "ppe_chart": [], "zone_chart": [], "task_chart": []}
 
     time_chart, ppe_chart, zone_chart, task_chart = [], [], [], []
 
-    if "time_slot" in violated_df.columns:
-        t_counts = violated_df["time_slot"].value_counts()
-        # 오전, 점심직후, 오후 순서대로 정렬
-        order = {"오전": 1, "점심직후": 2, "오후": 3}
-        time_chart = [{"label": str(k), "count": int(v)} for k, v in sorted(t_counts.items(), key=lambda x: order.get(x[0], 99))]
+    if "time" in violated_df.columns:
+        violated_df["hour"] = violated_df["time"].astype(str).str[:2].astype(int, errors='ignore')
+        t_counts = violated_df["hour"].value_counts()
+        time_chart = [{"label": f"{str(k).zfill(2)}시", "count": int(v)} for k, v in sorted(t_counts.items(), key=lambda x: str(x[0]))]
 
-    if "missed_ppe" in violated_df.columns:
-        p_counts = violated_df["missed_ppe"].value_counts()
+    ppe_col = _get_ppe_col(violated_df)
+    if ppe_col:
+        p_counts = violated_df[ppe_col].value_counts()
         ppe_chart = [{"label": str(k), "count": int(v)} for k, v in p_counts.items() if str(k).strip() != ""]
 
     if "zone" in violated_df.columns:
@@ -451,26 +447,18 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
         "task_chart": task_chart,
     }
 
-
 def get_recommend_action(df: pd.DataFrame) -> str:
-    if "is_violated" not in df.columns:
-        return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 PPE 점검을 유지하세요."
-
-    is_viol = pd.to_numeric(df["is_violated"], errors="coerce").fillna(0) == 1
-    violated_df = df[is_viol].copy()
-
+    violated_df = _get_violated_df_p3(df)
     if violated_df.empty:
         return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 PPE 점검을 유지하세요."
 
-    top_ppe = violated_df["missed_ppe"].value_counts().idxmax() if "missed_ppe" in violated_df.columns and not violated_df["missed_ppe"].dropna().empty else ""
+    ppe_col = _get_ppe_col(violated_df)
+    top_ppe = violated_df[ppe_col].value_counts().idxmax() if ppe_col and not violated_df[ppe_col].dropna().empty else ""
     top_task = violated_df["task_type"].value_counts().idxmax() if "task_type" in violated_df.columns and not violated_df["task_type"].dropna().empty else ""
 
-    if top_ppe == "랜야드":
-        return f"{top_task} 전 랜야드 체결 여부를 우선 점검하세요."
-    if top_ppe == "안전모":
-        return f"{top_task} 전 안전모 착용 여부를 우선 점검하세요."
-    if top_ppe == "장갑":
-        return f"{top_task} 전 장갑 착용 여부를 우선 점검하세요."
+    if top_ppe == "랜야드": return f"{top_task} 전 랜야드 체결 여부를 우선 점검하세요."
+    if top_ppe == "안전모": return f"{top_task} 전 안전모 착용 여부를 우선 점검하세요."
+    if top_ppe == "장갑": return f"{top_task} 전 장갑 착용 여부를 우선 점검하세요."
 
     return f"{top_task} 작업 전 PPE 착용 여부를 우선 점검하세요."
 
