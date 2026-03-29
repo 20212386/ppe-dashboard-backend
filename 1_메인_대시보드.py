@@ -1,14 +1,15 @@
 import streamlit as st
-import requests
-
-API_BASE = "https://ppe-dashboard-backend.onrender.com"
+import pandas as pd
+from pathlib import Path
 
 st.set_page_config(page_title="메인 대시보드", page_icon="🦺", layout="wide")
+
+DATA_PATH = Path("app/data/input_logs.csv")
 
 st.markdown("""
 <style>
 .block-container {
-    padding-top: 1.5rem;
+    padding-top: 1.4rem;
     padding-bottom: 2rem;
 }
 .metric-card {
@@ -60,6 +61,7 @@ st.markdown("""
     padding: 22px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
     border: 1px solid #eef2f7;
+    min-height: 320px;
 }
 .section-title {
     font-size: 26px;
@@ -119,6 +121,34 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+@st.cache_data
+def load_input_logs():
+    if not DATA_PATH.exists():
+        return pd.DataFrame(columns=[
+            "date", "time_slot", "site", "zone", "task_type",
+            "missed_ppe", "is_violated", "team", "note"
+        ])
+
+    df = pd.read_csv(DATA_PATH)
+
+    required_cols = [
+        "date", "time_slot", "site", "zone", "task_type",
+        "missed_ppe", "is_violated", "team", "note"
+    ]
+    for col in required_cols:
+        if col not in df.columns:
+            df[col] = ""
+
+    df = df[required_cols].copy()
+
+    for col in ["date", "time_slot", "site", "zone", "task_type", "missed_ppe", "team", "note"]:
+        df[col] = df[col].fillna("").astype(str).str.strip()
+
+    df["is_violated"] = pd.to_numeric(df["is_violated"], errors="coerce").fillna(0).astype(int)
+
+    return df
+
+
 def render_metric_card(title, value, sub, accent, sub_bg, sub_fg, icon, icon_bg):
     st.markdown(
         f"""
@@ -141,29 +171,24 @@ def render_empty(msg="데이터가 없습니다."):
     st.markdown(f'<div class="guide-box">{msg}</div>', unsafe_allow_html=True)
 
 
-def safe_df(data):
-    import pandas as pd
-    if not data:
+def make_count_df(series):
+    if series.empty:
         return pd.DataFrame(columns=["label", "count"])
-    df = pd.DataFrame(data)
-    if "label" not in df.columns:
-        df["label"] = ""
-    if "count" not in df.columns:
-        df["count"] = 0
-    df["label"] = df["label"].fillna("").astype(str)
-    df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0).astype(int)
-    df = df[df["label"] != ""].reset_index(drop=True)
-    return df
+    vc = series.value_counts()
+    return pd.DataFrame({
+        "label": vc.index.astype(str),
+        "count": vc.values.astype(int)
+    })
 
 
 def render_bar_list(df, color):
-    df = safe_df(df)
     if df.empty:
         render_empty("표시할 데이터가 없습니다.")
         return
 
     max_count = max(int(df["count"].max()), 1)
     html = ""
+
     for _, row in df.iterrows():
         label = str(row["label"])
         count = int(row["count"])
@@ -180,41 +205,60 @@ def render_bar_list(df, color):
             </div>
         </div>
         """
+
     st.markdown(html, unsafe_allow_html=True)
 
 
-@st.cache_data(ttl=30)
-def fetch_dashboard_data():
-    try:
-        response = requests.get(f"{API_BASE}/dashboard/summary", timeout=30)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        st.error(f"대시보드 데이터 조회 실패: {e}")
-        return None
-
+df = load_input_logs()
 
 st.markdown("## PPE 안전관리 메인 대시보드")
-st.caption("현장 전체 안전 현황을 한눈에 확인합니다.")
+st.caption("입력 로그 기준으로 전체 안전 현황을 보여줍니다.")
 
-data = fetch_dashboard_data()
-
-if not data:
-    render_empty("백엔드 응답이 없어서 대시보드를 불러오지 못했습니다.")
+if df.empty:
+    render_empty("input_logs.csv 데이터가 없습니다.")
     st.stop()
 
-# 백엔드 응답 구조 가정
-overall_compliance = data.get("overall_compliance_rate", 0)
-total_logs = data.get("total_logs", 0)
-violations = data.get("total_violations", 0)
-weakest_zone = data.get("weakest_zone", {}).get("zone", "-")
-weakest_zone_count = data.get("weakest_zone", {}).get("count", 0)
-most_missing = data.get("most_missing_ppe", {}).get("ppe", "-")
-most_missing_count = data.get("most_missing_ppe", {}).get("count", 0)
+total_logs = len(df)
+total_violations = int((df["is_violated"] == 1).sum())
+overall_compliance = round(((total_logs - total_violations) / total_logs) * 100, 1) if total_logs > 0 else 0.0
 
-hourly_data = data.get("hourly_violations", [])
-zone_risk_data = data.get("zone_risk_scores", [])
-safety_points = data.get("safety_points", [])
+violated_df = df[df["is_violated"] == 1].copy()
+
+if violated_df.empty:
+    weakest_zone = "-"
+    weakest_zone_count = 0
+    most_missing = "-"
+    most_missing_count = 0
+    hourly_df = pd.DataFrame(columns=["label", "count"])
+    zone_df = pd.DataFrame(columns=["label", "count"])
+    ppe_df = pd.DataFrame(columns=["label", "count"])
+else:
+    zone_counts = violated_df["zone"][violated_df["zone"] != ""].value_counts()
+    weakest_zone = zone_counts.idxmax() if not zone_counts.empty else "-"
+    weakest_zone_count = int(zone_counts.max()) if not zone_counts.empty else 0
+
+    ppe_counts = violated_df["missed_ppe"][violated_df["missed_ppe"] != ""].value_counts()
+    most_missing = ppe_counts.idxmax() if not ppe_counts.empty else "-"
+    most_missing_count = int(ppe_counts.max()) if not ppe_counts.empty else 0
+
+    time_order = {"오전": 0, "점심직후": 1, "오후": 2}
+    hourly_df = make_count_df(violated_df["time_slot"][violated_df["time_slot"] != ""])
+    if not hourly_df.empty:
+        hourly_df["order"] = hourly_df["label"].map(lambda x: time_order.get(x, 999))
+        hourly_df = hourly_df.sort_values(["order", "label"]).drop(columns=["order"]).reset_index(drop=True)
+
+    zone_df = make_count_df(violated_df["zone"][violated_df["zone"] != ""])
+    ppe_df = make_count_df(violated_df["missed_ppe"][violated_df["missed_ppe"] != ""])
+
+safety_points = []
+if weakest_zone != "-":
+    safety_points.append(f"{weakest_zone} 점검 강화 필요")
+if most_missing != "-":
+    safety_points.append(f"{most_missing} 착용 여부 집중 확인 필요")
+if not violated_df.empty and not hourly_df.empty:
+    safety_points.append(f"{hourly_df.iloc[0]['label']} 시간대 위반 패턴 확인 필요")
+if not safety_points:
+    safety_points = ["현재 큰 위반 패턴은 없지만 지속 점검이 필요합니다."]
 
 c1, c2, c3, c4 = st.columns(4)
 
@@ -245,7 +289,7 @@ with c2:
 with c3:
     render_metric_card(
         "전체 위반 건수",
-        f"{violations}",
+        f"{total_violations}",
         "위험 감지",
         "#ef4444",
         "#fef2f2",
@@ -275,15 +319,15 @@ with r1c1:
         '<div class="section-card"><div class="section-title">시간대별 위반 현황</div><div class="section-sub">어느 시간대에 위반이 많이 몰리는지 확인합니다</div>',
         unsafe_allow_html=True
     )
-    render_bar_list(hourly_data, "#3b82f6")
+    render_bar_list(hourly_df, "#3b82f6")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r1c2:
     st.markdown(
-        '<div class="section-card"><div class="section-title">구역별 위험도</div><div class="section-sub">구역별 위험 수준을 비교합니다</div>',
+        '<div class="section-card"><div class="section-title">구역별 위반 현황</div><div class="section-sub">어느 작업구역에 위반이 많이 몰리는지 확인합니다</div>',
         unsafe_allow_html=True
     )
-    render_bar_list(zone_risk_data, "#f97316")
+    render_bar_list(zone_df, "#f97316")
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div style='height:18px;'></div>", unsafe_allow_html=True)
@@ -292,13 +336,10 @@ r2c1, r2c2 = st.columns(2)
 
 with r2c1:
     st.markdown(
-        '<div class="section-card"><div class="section-title">반복 누락 PPE</div><div class="section-sub">가장 자주 빠지는 보호구를 봅니다</div>',
+        '<div class="section-card"><div class="section-title">누락 PPE 현황</div><div class="section-sub">가장 자주 빠지는 보호구를 확인합니다</div>',
         unsafe_allow_html=True
     )
-    render_bar_list(
-        [{"label": most_missing, "count": most_missing_count}] if most_missing != "-" else [],
-        "#8b5cf6"
-    )
+    render_bar_list(ppe_df, "#8b5cf6")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r2c2:
@@ -306,20 +347,15 @@ with r2c2:
         '<div class="section-card"><div class="section-title">안전 포인트</div><div class="section-sub">바로 확인할 핵심 요약입니다</div>',
         unsafe_allow_html=True
     )
-
-    if safety_points:
-        for point in safety_points:
-            st.markdown(
-                f"""
-                <div style="margin-bottom:12px; padding:14px 16px; border-radius:16px; background:#f8fafc; border:1px solid #e2e8f0; font-size:15px; font-weight:600; color:#334155;">
-                    • {point}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-    else:
-        render_empty("안전 포인트 데이터가 없습니다.")
-
+    for point in safety_points:
+        st.markdown(
+            f"""
+            <div style="margin-bottom:12px; padding:14px 16px; border-radius:16px; background:#f8fafc; border:1px solid #e2e8f0; font-size:15px; font-weight:600; color:#334155;">
+                • {point}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(
