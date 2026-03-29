@@ -8,7 +8,7 @@ st.set_page_config(page_title="위험패턴 분석", page_icon="📊", layout="w
 API_BASE = "https://ppe-dashboard-backend.onrender.com"
 
 # =========================
-# 1. 스타일 (토스/애플 감성 완벽 이식)
+# 1. 스타일 (애플/토스 감성 완벽 이식)
 # =========================
 st.markdown("""
 <style>
@@ -16,7 +16,7 @@ st.markdown("""
 .main-title { font-size: 2.15rem; font-weight: 800; color: #0f172a; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
 .sub-title { font-size: 0.98rem; color: #64748b; margin-bottom: 1.1rem; }
 .filter-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
-.section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
+.section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; height: 100%; }
 .section-title { font-size: 1.16rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem; }
 .section-sub { color: #64748b; font-size: 0.88rem; margin-bottom: 1.2rem; }
 .metric-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 18px 20px; min-height: 158px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
@@ -138,14 +138,7 @@ ppe_df = _safe_counts_df(charts.get("ppe_chart", []), ppe_cats)
 zone_df = _safe_counts_df(charts.get("zone_chart", []), zone_cats)
 task_df = _safe_counts_df(charts.get("task_chart", []), task_cats)
 
-# 💡 [핵심 스마트 처리] 바닥에 누운 바 세우기 & 100% 깎아내기
-if not zone_df.empty:
-    # 1) 데이터가 없어서 0%로 누워버린 애들 -> 준수율 100%로 꼿꼿하게 세워줌!
-    zone_df.loc[(zone_df["count"] == 0) & (zone_df["risk_rate"] == 0.0), "compliance_rate"] = 100.0
-    
-    # 2) 위험도 100% 꼴보기 싫을 때 -> 85%로 마사지 (보고서용 꼼수)
-    zone_df.loc[zone_df["risk_rate"] == 100.0, "risk_rate"] = 85.0
-    zone_df.loc[zone_df["risk_rate"] == 85.0, "compliance_rate"] = 15.0
+# 💡 [팩트 체크] 주작 코드(85%) 완전 삭제! 있는 그대로 보여주되 0건은 깔끔하게 0으로!
 
 top_time, top_zone, top_task, top_ppe = kpis.get("top_time") or "-", kpis.get("top_zone") or "-", kpis.get("top_task_type") or "-", kpis.get("top_ppe") or "-"
 
@@ -160,7 +153,7 @@ with c4: render_metric_card("가장 많이 누락된 PPE", top_ppe, "누락 상�
 st.markdown(f'<div class="small-stat">현재 필터 조건에 맞는 데이터 건수: <b>{count}</b></div>', unsafe_allow_html=True)
 
 # =========================
-# 5. 차트 렌더링
+# 5. 차트 렌더링 (높이 완벽 일치 & 눈금 자동 조절)
 # =========================
 r1c1, r1c2 = st.columns(2)
 
@@ -169,8 +162,9 @@ with r1c1:
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
     else:
         fig_time = go.Figure(go.Bar(x=time_df["label"].tolist(), y=time_df["count"].tolist(), marker_color=["#60a5fa", "#3b82f6", "#1e3a8a"], width=0.45))
-        y_max = max(4, int(time_df["count"].max()) + 2)
-        fig_time.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max], dtick=2))
+        y_max = max(4, int(time_df["count"].max()) + (int(time_df["count"].max()) * 0.1))
+        # 💡 dtick 삭제! Plotly가 알아서 똑똑하게 눈금 그림
+        fig_time.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max]))
         try: fig_time.update_layout(barcornerradius=12)
         except: pass
         st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
@@ -181,8 +175,9 @@ with r1c2:
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
     else:
         fig_ppe = go.Figure(go.Bar(x=ppe_df["label"].tolist(), y=ppe_df["count"].tolist(), marker_color=["#c4b5fd", "#a855f7", "#7e22ce"], width=0.45))
-        y_max = max(4, int(ppe_df["count"].max()) + 2)
-        fig_ppe.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max], dtick=2))
+        y_max = max(4, int(ppe_df["count"].max()) + (int(ppe_df["count"].max()) * 0.1))
+        # 💡 dtick 삭제! 
+        fig_ppe.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max]))
         try: fig_ppe.update_layout(barcornerradius=12)
         except: pass
         st.plotly_chart(fig_ppe, use_container_width=True, config={"displayModeBar": False})
@@ -199,10 +194,10 @@ with r2c1:
         fig_zone.add_trace(go.Bar(x=zone_df["label"].tolist(), y=zone_df["risk_rate"].tolist(), name="위험도 %", marker_color="#ef4444", width=0.35))
         
         fig_zone.update_layout(
-            barmode="group", height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
+            barmode="group", height=350, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
             showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
             bargap=0.35, bargroupgap=0.05,
-            yaxis=dict(range=[0, 100], dtick=25, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), ticksuffix="%"),
+            yaxis=dict(range=[0, 100], dtick=20, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), ticksuffix="%"),
             xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155"))
         )
         try: fig_zone.update_layout(barcornerradius=12)
@@ -215,8 +210,9 @@ with r2c2:
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
     else:
         fig_task = go.Figure(go.Bar(y=task_df["label"].tolist(), x=task_df["count"].tolist(), orientation="h", marker_color=["#93c5fd", "#60a5fa", "#3b82f6", "#1e40af"], width=0.45))
-        x_max = max(4, int(task_df["count"].max()) + 2)
-        fig_task.update_layout(height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#334155")), xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, x_max], dtick=2))
+        x_max = max(4, int(task_df["count"].max()) + (int(task_df["count"].max()) * 0.1))
+        # 💡 dtick 삭제!
+        fig_task.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#334155")), xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, x_max]))
         try: fig_task.update_layout(barcornerradius=12)
         except: pass
         st.plotly_chart(fig_task, use_container_width=True, config={"displayModeBar": False})
