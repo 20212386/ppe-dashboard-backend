@@ -70,11 +70,33 @@ def fetch_analysis_data(params: dict):
         return None
 
 def apply_beautiful_layout(fig, is_horizontal=False):
-    fig.update_layout(height=320, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", showlegend=False, bargap=0.4)
-    if is_horizontal: fig.update_layout(xaxis=dict(showgrid=True, gridcolor="#f1f5f9"), yaxis=dict(autorange="reversed"))
-    else: fig.update_layout(yaxis=dict(showgrid=True, gridcolor="#f1f5f9"))
+    fig.update_layout(
+        height=320, margin=dict(l=10, r=10, t=20, b=10), 
+        plot_bgcolor="white", paper_bgcolor="white", 
+        showlegend=False, bargap=0.4
+    )
+    
+    # 💡 1. 막대기 굵기 강제 고정! (바늘구멍이나 뚱땡이 방지)
+    fig.update_traces(width=0.4)
+
+    if is_horizontal: 
+        fig.update_layout(
+            # 💡 2. x축은 무조건 0부터 시작, 정수(d)로만 표시! (마이너스, 소수점 금지)
+            xaxis=dict(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", tickformat="d"),
+            # 💡 3. y축은 카테고리(글자)로 인식하게 강제!
+            yaxis=dict(autorange="reversed", type="category")
+        )
+    else: 
+        fig.update_layout(
+            # 💡 3. x축은 카테고리(글자)로 인식하게 강제!
+            xaxis=dict(type="category"),
+            # 💡 2. y축은 무조건 0부터 시작, 정수(d)로만 표시! (마이너스, 소수점 금지)
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", tickformat="d")
+        )
+        
     try: fig.update_layout(barcornerradius=8)
     except: pass
+    
     return fig
 
 def _safe_counts_df(df_data) -> pd.DataFrame:
