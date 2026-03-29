@@ -76,7 +76,7 @@ def _safe_counts_df(df_data) -> pd.DataFrame:
     df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0).astype(int)
     return df[df["label"] != ""].reset_index(drop=True)
 
-ddef create_beautiful_chart(df, color, line_color, is_horizontal=False):
+def create_beautiful_chart(df, color, line_color, is_horizontal=False):
     x_data = df["label"].tolist()
     y_data = df["count"].tolist()
     
