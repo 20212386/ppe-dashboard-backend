@@ -77,27 +77,28 @@ def _safe_counts_df(df_data) -> pd.DataFrame:
     return df[df["label"] != ""].reset_index(drop=True)
 
 def create_beautiful_chart(df, color, line_color, is_horizontal=False):
-    # 💡 데이터가 적어도 눈금은 최소 4칸까지 무조건 보여주게 강제 설정
-    max_val = int(df["count"].max()) if not df.empty else 0
-    y_max = max(max_val + 1.5, 4) 
+    # 💡 에러 원인 완벽 차단! Plotly가 데이터를 못 읽고 0으로 뭉개는 버그 방지 (.tolist() 변환)
+    x_data = df["label"].tolist()
+    y_data = df["count"].tolist()
     
-    # 💡 이쑤시개 방지: 데이터가 2개 이하일 때 굵기 무조건 고정
-    bar_width = 0.35 if len(df) <= 2 else None 
+    max_val = max(y_data) if y_data else 0
+    y_max = max(max_val + 1.5, 4) 
+    bar_width = 0.35 if len(x_data) <= 2 else None 
 
     if is_horizontal:
         fig = go.Figure(go.Bar(
-            x=df["count"], y=df["label"], orientation="h", width=bar_width,
-            marker=dict(color=color, line=dict(color=line_color, width=1.5))
+            x=y_data, y=x_data, orientation="h", width=bar_width,
+            marker=dict(color=color, line=dict(color=line_color, width=1.5)),
+            text=y_data, textposition="auto" # 💡 막대기 안에 예쁘게 건수(숫자) 표시!
         ))
-        # dtick=1로 소수점 원천 차단
         fig.update_xaxes(showgrid=True, gridcolor="#f1f5f9", dtick=1, range=[0, y_max])
         fig.update_yaxes(autorange="reversed", type="category")
     else:
         fig = go.Figure(go.Bar(
-            x=df["label"], y=df["count"], width=bar_width,
-            marker=dict(color=color, line=dict(color=line_color, width=1.5))
+            x=x_data, y=y_data, width=bar_width,
+            marker=dict(color=color, line=dict(color=line_color, width=1.5)),
+            text=y_data, textposition="auto" # 💡 막대기 안에 예쁘게 건수(숫자) 표시!
         ))
-        # dtick=1로 소수점 원천 차단
         fig.update_xaxes(type="category")
         fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", dtick=1, range=[0, y_max])
         
