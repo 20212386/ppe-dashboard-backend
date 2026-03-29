@@ -65,11 +65,11 @@ def fetch_analysis_data(params: dict):
         st.error(f"분석 데이터 조회 실패: {e}")
         return None
 
-# 💡 핵심 수술 부위: 0건이라도 기획서에 있는 기본 항목은 무조건 바닥에 깔아둔다!
+# 💡 [핵심] 빈칸 방어 로직: 0건이라도 항목 이름 무조건 유지 + 퍼센트 데이터(compliance, risk)도 0.0으로 꽉 잡아줌!
 def _safe_counts_df(df_data, all_categories=None) -> pd.DataFrame:
     df = pd.DataFrame(df_data)
     if df.empty or "label" not in df.columns or "count" not in df.columns:
-        df = pd.DataFrame(columns=["label", "count"])
+        df = pd.DataFrame(columns=["label", "count", "compliance_rate", "risk_rate"])
     else:
         df["label"] = df["label"].fillna("").astype(str)
         df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0).astype(int)
@@ -77,7 +77,9 @@ def _safe_counts_df(df_data, all_categories=None) -> pd.DataFrame:
     if all_categories:
         cat_df = pd.DataFrame({"label": all_categories})
         df = pd.merge(cat_df, df, on="label", how="left").fillna(0)
-        df["count"] = df["count"].astype(int)
+        if "count" in df.columns: df["count"] = df["count"].astype(int)
+        if "compliance_rate" not in df.columns: df["compliance_rate"] = 0.0
+        if "risk_rate" not in df.columns: df["risk_rate"] = 0.0
         
     return df[df["label"] != ""].reset_index(drop=True)
 
@@ -155,7 +157,7 @@ if analysis_data:
 else:
     count, kpis, charts, recommend_action = 0, {}, {}, "필터를 설정한 뒤 '분석 실행' 버튼을 눌러주세요."
 
-# 💡 차트에 기본으로 띄울 필수 항목 이름들 (기획서 반영!)
+# 💡 차트에 기본으로 띄울 필수 항목 이름들
 time_cats = ["오전", "점심직후", "오후"]
 ppe_cats = ["안전모", "랜야드", "장갑"]
 zone_cats = ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]
@@ -205,12 +207,21 @@ with r1c2:
 r2c1, r2c2 = st.columns(2)
 
 with r2c1:
-    st.markdown('<div class="section-card"><div class="section-title">구역별 위반 건수</div><div class="section-sub">어느 작업구역에서 위반이 반복되는지 확인합니다</div>', unsafe_allow_html=True)
+    # 💡 [핵심 복구] 기획서 100% 동일한 '초록/빨강 막대' % 차트!
+    st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
     else:
-        fig_zone = create_beautiful_chart(zone_df, "rgba(14, 165, 233, 0.65)", "#0284c7", True)
+        fig_zone = go.Figure()
+        fig_zone.add_trace(go.Bar(x=zone_df["label"], y=zone_df["compliance_rate"], name="준수율 %", marker_color="#22c55e", width=0.35))
+        fig_zone.add_trace(go.Bar(x=zone_df["label"], y=zone_df["risk_rate"], name="위험도 %", marker_color="#ef4444", width=0.35))
+        
+        fig_zone.update_layout(
+            barmode='group', height=340, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", 
+            showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+            yaxis=dict(range=[0, 100], dtick=25, showgrid=True, gridcolor="#f1f5f9", ticksuffix="%")
+        )
         st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
-        st.markdown(f'<div class="insight-box" style="background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a;">💡 패턴 해석: 가장 취약한 구역은 <b>{top_zone}</b>입니다.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="insight-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">💡 패턴 해석: 위험도가 가장 높은 취약 구역은 <b>{top_zone}</b>입니다.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r2c2:
