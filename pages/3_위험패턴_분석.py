@@ -70,33 +70,21 @@ def fetch_analysis_data(params: dict):
         return None
 
 def apply_beautiful_layout(fig, is_horizontal=False):
+    # 💡 1. 이쑤시개 원인 제거! (width 강제 고정 삭제, 알아서 예쁘게 조절하게 냅둠)
     fig.update_layout(
         height=320, margin=dict(l=10, r=10, t=20, b=10), 
         plot_bgcolor="white", paper_bgcolor="white", 
-        showlegend=False, bargap=0.4
+        showlegend=False, bargap=0.5
     )
     
-    # 💡 1. 막대기 굵기 강제 고정! (바늘구멍이나 뚱땡이 방지)
-    fig.update_traces(width=0.4)
-
+    # 💡 2. 마이너스(-) 눈금 절대 안 나오게 원천 차단! (rangemode="nonnegative")
     if is_horizontal: 
-        fig.update_layout(
-            # 💡 2. x축은 무조건 0부터 시작, 정수(d)로만 표시! (마이너스, 소수점 금지)
-            xaxis=dict(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", tickformat="d"),
-            # 💡 3. y축은 카테고리(글자)로 인식하게 강제!
-            yaxis=dict(autorange="reversed", type="category")
-        )
+        fig.update_xaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="nonnegative")
+        fig.update_yaxes(autorange="reversed", type="category")
     else: 
-        fig.update_layout(
-            # 💡 3. x축은 카테고리(글자)로 인식하게 강제!
-            xaxis=dict(type="category"),
-            # 💡 2. y축은 무조건 0부터 시작, 정수(d)로만 표시! (마이너스, 소수점 금지)
-            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", tickformat="d")
-        )
+        fig.update_xaxes(type="category")
+        fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="nonnegative")
         
-    try: fig.update_layout(barcornerradius=8)
-    except: pass
-    
     return fig
 
 def _safe_counts_df(df_data) -> pd.DataFrame:
