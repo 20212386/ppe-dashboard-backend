@@ -371,220 +371,238 @@ def append_manual_entry(entry: dict) -> dict:
         return {"status": "success", "message": "수동 입력 데이터가 저장되었습니다."}
     except Exception as e:
         return {"status": "error", "message": f"저장 실패: {str(e)}"}
- # =========================
+# =========================
 # 페이지 3 분석 상세
 # =========================
 
-import re
+import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
+import requests
 
+st.set_page_config(page_title="위험패턴 분석", page_icon="📊", layout="wide")
 
-def _extract_ppe_from_note(note: str) -> str:
-    if not isinstance(note, str):
-        return ""
-    m = re.search(r"(장갑|안전모|랜야드)", note)
-    return m.group(1) if m else ""
+API_BASE = "https://ppe-dashboard-backend.onrender.com"
 
+# =========================
+# 1. 스타일
+# =========================
+st.markdown("""
+<style>
+.block-container { padding-top: 1.5rem; padding-bottom: 2rem; max-width: 1480px; }
+.main-title { font-size: 2.15rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+.sub-title { color: #64748b; font-size: 1rem; margin-bottom: 1.1rem; }
+.filter-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 22px; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
+.section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 20px; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
+.section-title { font-size: 1.12rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; }
+.section-sub { color: #64748b; font-size: 0.86rem; margin-bottom: 0.95rem; }
 
-def _is_violation_from_note(note: str) -> bool:
-    if not isinstance(note, str):
-        return False
-    return "미흡" in note
+.metric-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 18px 20px; height: 145px; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05); }
+.metric-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.metric-label { color: #64748b; font-size: 0.9rem; margin-bottom: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.metric-value { color: #0f172a; font-size: 1.3rem; font-weight: 800; line-height: 1.2; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.metric-badge { display: inline-block; padding: 6px 11px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; }
+.metric-icon { width: 45px; height: 45px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
 
+.insight-box { border-radius: 14px; padding: 11px 13px; margin-top: 0.85rem; font-size: 0.87rem; border: 1px solid; }
+.recommend-box { background: linear-gradient(135deg, #eef4ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; border-radius: 18px; padding: 18px; color: #1e3a8a; font-size: 0.96rem; font-weight: 700; }
+.analysis-guide { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 18px; padding: 18px; color: #475569; font-size: 0.92rem; text-align: center; }
+.small-stat { color: #64748b; font-size: 0.9rem; margin: 0.2rem 0 0.9rem 0; }
+.stButton > button { border-radius: 14px; font-weight: 800; min-height: 46px; }
+</style>
+""", unsafe_allow_html=True)
 
-def _is_safe_from_note(note: str) -> bool:
-    if not isinstance(note, str):
-        return False
-    return "정상 수행" in note
+# =========================
+# 2. 렌더링 함수들
+# =========================
+def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, icon_bg, icon_fg, icon_symbol):
+    st.markdown(f"""
+        <div class="metric-card" style="border-left:6px solid {accent};">
+            <div class="metric-top">
+                <div style="width: 75%; overflow: hidden;">
+                    <div class="metric-label" title="{title}">{title}</div>
+                    <div class="metric-value" title="{value}">{value}</div>
+                    <span class="metric-badge" style="background:{badge_bg}; color:{badge_fg};">{badge_text}</span>
+                </div>
+                <div class="metric-icon" style="background:{icon_bg}; color:{icon_fg};">{icon_symbol}</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-def filter_input_data(
-    df: pd.DataFrame,
-    start_date: str | None = None,
-    end_date: str | None = None,
-    site: str | None = None,
-    zone: str | None = None,
-    task_type: str | None = None,
-    ppe_type: str | None = None,
-    risk_exposure: str | None = None,
-) -> pd.DataFrame:
-    if df.empty:
-        return df.copy()
+def render_empty_chart_message(message: str):
+    st.markdown(f'<div class="analysis-guide">{message}</div>', unsafe_allow_html=True)
 
-    filtered_df = df.copy()
+def fetch_analysis_data(params: dict):
+    try:
+        clean_params = {k: v for k, v in params.items() if v is not None and v != ""}
+        res = requests.get(f"{API_BASE}/analysis/detail", params=clean_params, timeout=60)
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        st.error(f"분석 데이터 조회 실패: {e}")
+        return None
 
-    if start_date and "date" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["date"].astype(str).str.strip() >= str(start_date).strip()
-        ].copy()
+def _safe_counts_df(df_data, all_categories=None) -> pd.DataFrame:
+    df = pd.DataFrame(df_data)
+    if df.empty or "label" not in df.columns or "count" not in df.columns:
+        df = pd.DataFrame(columns=["label", "count", "compliance_rate", "risk_rate"])
+    else:
+        df["label"] = df["label"].fillna("").astype(str)
+        df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0).astype(int)
 
-    if end_date and "date" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["date"].astype(str).str.strip() <= str(end_date).strip()
-        ].copy()
+    if all_categories:
+        cat_df = pd.DataFrame({"label": all_categories})
+        df = pd.merge(cat_df, df, on="label", how="left").fillna(0)
+        if "count" in df.columns: df["count"] = df["count"].astype(int)
+        
+    return df[df["label"] != ""].reset_index(drop=True)
 
-    if site and "site" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["site"].astype(str).str.strip() == str(site).strip()
-        ].copy()
+def create_beautiful_chart(df, color, line_color, is_horizontal=False):
+    x_data = df["label"].tolist()
+    y_data = df["count"].tolist()
+    
+    max_val = max(y_data) if y_data else 0
+    tick_step = 1 if max_val <= 10 else None
+    y_max = max(max_val + (max_val*0.2), 4) 
+    bar_width = 0.45
 
-    if zone and "zone" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["zone"].astype(str).str.strip() == str(zone).strip()
-        ].copy()
+    if is_horizontal:
+        fig = go.Figure(go.Bar(x=y_data, y=x_data, orientation="h", width=bar_width, marker=dict(color=color, line=dict(color=line_color, width=1.5))))
+        fig.update_xaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", dtick=tick_step, range=[0, y_max])
+        fig.update_yaxes(autorange="reversed", type="category")
+    else:
+        fig = go.Figure(go.Bar(x=x_data, y=y_data, width=bar_width, marker=dict(color=color, line=dict(color=line_color, width=1.5))))
+        fig.update_xaxes(type="category")
+        fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", dtick=tick_step, range=[0, y_max])
+        
+    fig.update_layout(height=320, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", showlegend=False)
+    return fig
 
-    if task_type and "task_type" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["task_type"].astype(str).str.strip() == str(task_type).strip()
-        ].copy()
+# =========================
+# 3. 화면 UI 및 필터
+# =========================
+if "p3_analysis_data" not in st.session_state:
+    st.session_state["p3_analysis_data"] = None
 
-    if ppe_type and "missed_ppe" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["missed_ppe"].astype(str).str.strip() == str(ppe_type).strip()
-        ].copy()
+st.markdown('<div class="main-title">위험패턴 분석</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">필터 조건에 맞는 반복 위험 패턴을 분석하고 개입 우선순위를 확인합니다</div>', unsafe_allow_html=True)
 
-    if risk_exposure and "is_violated" in filtered_df.columns:
-        risk_value = 1 if str(risk_exposure) in ["1", "O"] else 0
-        filtered_df = filtered_df[
-            pd.to_numeric(filtered_df["is_violated"], errors="coerce")
-            .fillna(0)
-            .astype(int) == risk_value
-        ].copy()
+st.markdown('<div class="filter-card"><div class="section-title">분석 필터</div><div class="section-sub">현장, 날짜, 작업 조건에 따라 반복 위험 패턴을 좁혀서 볼 수 있습니다</div>', unsafe_allow_html=True)
 
-    return filtered_df
+f1, f2, f3 = st.columns(3)
+f4, f5, f6 = st.columns(3)
+f7, f8 = st.columns([1, 2])
 
+with f1: start_date = st.text_input("시작 날짜", value="2026-03-01")
+with f2: end_date = st.text_input("종료 날짜", value="2026-03-31")
+with f3: site = st.selectbox("현장", ["", "현장1", "현장2", "현장3"])
+with f4: zone = st.selectbox("작업구역", ["", "고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"])
+with f5: task_type = st.selectbox("작업유형", ["", "고소작업", "절단작업", "자재운반", "설비점검"])
+with f6: ppe_type = st.selectbox("PPE 종류", ["", "장갑", "안전모", "랜야드"])
+with f7: risk_exposure = st.selectbox("위험노출 여부", ["", "O", "X"])
+with f8:
+    st.markdown("<div style='margin-top: 28.5px;'></div>", unsafe_allow_html=True)
+    run_analysis = st.button("분석 실행", use_container_width=True)
 
+st.markdown('</div>', unsafe_allow_html=True)
 
+params = {
+    "start_date": start_date or None, "end_date": end_date or None, "site": site or None,
+    "zone": zone or None, "task_type": task_type or None, "ppe_type": ppe_type or None,
+    "risk_exposure": (1 if risk_exposure == "O" else 0) if risk_exposure in ["O", "X"] else None,
+}
 
-def get_analysis_kpis(df: pd.DataFrame) -> dict:
-    if df.empty:
-        return {
-            "top_time": "-",
-            "top_zone": "-",
-            "top_task_type": "-",
-            "top_ppe": "-",
-        }
+if run_analysis:
+    st.session_state["p3_analysis_data"] = fetch_analysis_data(params)
 
-    top_time = "-"
-    top_zone = "-"
-    top_task_type = "-"
-    top_ppe = "-"
+analysis_data = st.session_state["p3_analysis_data"]
 
-    if "time_slot" in df.columns:
-        ts = df["time_slot"].astype(str).str.strip()
-        ts = ts[(ts != "") & (ts.str.lower() != "nan") & (ts.str.lower() != "none")]
-        if not ts.empty:
-            top_time = ts.value_counts().idxmax()
+if analysis_data:
+    count = analysis_data.get("count", 0)
+    kpis = analysis_data.get("kpis", {})
+    charts = analysis_data.get("charts", {})
+    recommend_action = analysis_data.get("recommend_action", "추천 조치가 없습니다.")
+else:
+    count, kpis, charts, recommend_action = 0, {}, {}, "필터를 설정한 뒤 '분석 실행' 버튼을 눌러주세요."
 
-    if "zone" in df.columns:
-        zs = df["zone"].astype(str).str.strip()
-        zs = zs[(zs != "") & (zs.str.lower() != "nan") & (zs.str.lower() != "none")]
-        if not zs.empty:
-            top_zone = zs.value_counts().idxmax()
+time_cats = ["오전", "점심직후", "오후"]
+ppe_cats = ["안전모", "랜야드", "장갑"]
+zone_cats = ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]
+task_cats = ["고소작업", "절단작업", "자재운반", "설비점검"]
 
-    if "task_type" in df.columns:
-        tasks = df["task_type"].astype(str).str.strip()
-        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan") & (tasks.str.lower() != "none")]
-        if not tasks.empty:
-            top_task_type = tasks.value_counts().idxmax()
+time_df = _safe_counts_df(charts.get("time_chart", []), time_cats)
+ppe_df = _safe_counts_df(charts.get("ppe_chart", []), ppe_cats)
+zone_df = _safe_counts_df(charts.get("zone_chart", []), zone_cats)
+task_df = _safe_counts_df(charts.get("task_chart", []), task_cats)
 
-    if "missed_ppe" in df.columns:
-        ppes = df["missed_ppe"].astype(str).str.strip()
-        ppes = ppes[(ppes != "") & (ppes.str.lower() != "nan") & (ppes.str.lower() != "none")]
-        if not ppes.empty:
-            top_ppe = ppes.value_counts().idxmax()
+top_time, top_zone, top_task, top_ppe = kpis.get("top_time") or "-", kpis.get("top_zone") or "-", kpis.get("top_task_type") or "-", kpis.get("top_ppe") or "-"
 
-    return {
-        "top_time": top_time,
-        "top_zone": top_zone,
-        "top_task_type": top_task_type,
-        "top_ppe": top_ppe,
-    }
+# =========================
+# 4. KPI 카드 & 통계
+# =========================
+c1, c2, c3, c4 = st.columns(4)
+with c1: render_metric_card("가장 위험한 시간대", top_time, "위반 집중", "#ef4444", "#fef2f2", "#b91c1c", "#fef2f2", "#ef4444", "⏰")
+with c2: render_metric_card("가장 취약한 구역", top_zone, "위험 패턴 상위", "#f97316", "#fff7ed", "#c2410c", "#fff7ed", "#f97316", "📍")
+with c3: render_metric_card("반복 위험 작업유형", top_task, "반복 분석", "#eab308", "#fefce8", "#a16207", "#fefce8", "#ca8a04", "📉")
+with c4: render_metric_card("가장 많이 누락된 PPE", top_ppe, "누락 상위", "#a855f7", "#faf5ff", "#7e22ce", "#faf5ff", "#9333ea", "⛑")
 
+st.markdown(f'<div class="small-stat">현재 필터 조건에 맞는 데이터 건수: <b>{count}</b></div>', unsafe_allow_html=True)
 
-def get_analysis_charts(df: pd.DataFrame) -> dict:
-    if df.empty:
-        return {
-            "time_chart": [],
-            "ppe_chart": [],
-            "zone_chart": [],
-            "task_chart": [],
-        }
+# =========================
+# 5. 차트 렌더링
+# =========================
+r1c1, r1c2 = st.columns(2)
 
-    time_chart = []
-    ppe_chart = []
-    zone_chart = []
-    task_chart = []
+with r1c1:
+    st.markdown('<div class="section-card"><div class="section-title">시간대별 위반 건수</div><div class="section-sub">시간대별 반복 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
+    if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+    else:
+        fig_time = create_beautiful_chart(time_df, "rgba(59, 130, 246, 0.65)", "#2563eb", False)
+        st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
+        st.markdown(f'<div class="insight-box" style="background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a;">💡 패턴 해석: 위반이 집중된 시간대는 <b>{top_time}</b>입니다.</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    if "time_slot" in df.columns:
-        ts = df["time_slot"].astype(str).str.strip()
-        ts = ts[(ts != "") & (ts.str.lower() != "nan") & (ts.str.lower() != "none")]
-        if not ts.empty:
-            counts = ts.value_counts()
-            order = {"오전": 1, "점심직후": 2, "오후": 3}
-            time_chart = [
-                {"label": str(k), "count": int(v)}
-                for k, v in sorted(counts.items(), key=lambda x: order.get(str(x[0]), 999))
-            ]
+with r1c2:
+    st.markdown('<div class="section-card"><div class="section-title">PPE별 위반 건수</div><div class="section-sub">누락 빈도가 높은 보호구를 확인합니다</div>', unsafe_allow_html=True)
+    if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+    else:
+        fig_ppe = create_beautiful_chart(ppe_df, "rgba(139, 92, 246, 0.65)", "#7c3aed", False)
+        st.plotly_chart(fig_ppe, use_container_width=True, config={"displayModeBar": False})
+        st.markdown(f'<div class="insight-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">💡 패턴 해석: 가장 많이 누락되는 보호구는 <b>{top_ppe}</b>입니다.</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    if "missed_ppe" in df.columns:
-        ppes = df["missed_ppe"].astype(str).str.strip()
-        ppes = ppes[(ppes != "") & (ppes.str.lower() != "nan") & (ppes.str.lower() != "none")]
-        if not ppes.empty:
-            counts = ppes.value_counts()
-            ppe_chart = [{"label": str(k), "count": int(v)} for k, v in counts.items()]
+r2c1, r2c2 = st.columns(2)
 
-    if "zone" in df.columns:
-        zs = df["zone"].astype(str).str.strip()
-        zs = zs[(zs != "") & (zs.str.lower() != "nan") & (zs.str.lower() != "none")]
-        if not zs.empty:
-            counts = zs.value_counts()
-            zone_chart = [{"label": str(k), "count": int(v)} for k, v in counts.items()]
+with r2c1:
+    # 💡 [수술 부위] 기획서와 100% 동일한 준수율(초록) / 위험도(빨강) % 비교 차트!
+    st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
+    if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+    else:
+        fig_zone = go.Figure()
+        fig_zone.add_trace(go.Bar(x=zone_df["label"], y=zone_df["compliance_rate"], name="준수율 %", marker_color="#22c55e", width=0.35))
+        fig_zone.add_trace(go.Bar(x=zone_df["label"], y=zone_df["risk_rate"], name="위험도 %", marker_color="#ef4444", width=0.35))
+        
+        fig_zone.update_layout(
+            barmode='group', height=340, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", 
+            showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5), # 범례(Legend)를 기획서처럼 바닥으로!
+            yaxis=dict(range=[0, 100], dtick=25, showgrid=True, gridcolor="#f1f5f9") # y축은 % 니까 무조건 0~100 고정!
+        )
+        st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
+        st.markdown(f'<div class="insight-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">💡 패턴 해석: 위험도가 가장 높은 취약 구역은 <b>{top_zone}</b>입니다.</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    if "task_type" in df.columns:
-        tasks = df["task_type"].astype(str).str.strip()
-        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan") & (tasks.str.lower() != "none")]
-        if not tasks.empty:
-            counts = tasks.value_counts()
-            task_chart = [{"label": str(k), "count": int(v)} for k, v in counts.items()]
+with r2c2:
+    st.markdown('<div class="section-card"><div class="section-title">작업유형별 반복 횟수</div><div class="section-sub">반복 개입 우선순위가 높은 작업유형을 확인합니다</div>', unsafe_allow_html=True)
+    if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+    else:
+        fig_task = create_beautiful_chart(task_df, "rgba(168, 85, 247, 0.65)", "#9333ea", True)
+        st.plotly_chart(fig_task, use_container_width=True, config={"displayModeBar": False})
+        st.markdown(f'<div class="insight-box" style="background:#faf5ff; border-color:#e9d5ff; color:#6b21a8;">💡 패턴 해석: 반복 개입 우선 작업은 <b>{top_task}</b>입니다.</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    return {
-        "time_chart": time_chart,
-        "ppe_chart": ppe_chart,
-        "zone_chart": zone_chart,
-        "task_chart": task_chart,
-    }
-
-def get_recommend_action(df: pd.DataFrame) -> str:
-    if df.empty:
-        return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 PPE 점검을 유지하세요."
-
-    top_zone = "-"
-    top_task = "-"
-    top_ppe = "-"
-
-    if "zone" in df.columns:
-        zs = df["zone"].astype(str).str.strip()
-        zs = zs[(zs != "") & (zs.str.lower() != "nan") & (zs.str.lower() != "none")]
-        if not zs.empty:
-            top_zone = zs.value_counts().idxmax()
-
-    if "task_type" in df.columns:
-        tasks = df["task_type"].astype(str).str.strip()
-        tasks = tasks[(tasks != "") & (tasks.str.lower() != "nan") & (tasks.str.lower() != "none")]
-        if not tasks.empty:
-            top_task = tasks.value_counts().idxmax()
-
-    if "missed_ppe" in df.columns:
-        ppes = df["missed_ppe"].astype(str).str.strip()
-        ppes = ppes[(ppes != "") & (ppes.str.lower() != "nan") & (ppes.str.lower() != "none")]
-        if not ppes.empty:
-            top_ppe = ppes.value_counts().idxmax()
-
-    if top_ppe != "-" and top_task != "-":
-        return f"{top_task} 작업 전 {top_ppe} 착용 여부를 우선 점검하세요."
-    if top_zone != "-":
-        return f"{top_zone} 구역 반복 패턴을 우선 점검하세요."
-    return "반복 위반 상위 조건을 우선 점검하세요."
+st.markdown('<div class="section-card"><div class="section-title">추천 개입 조치</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="recommend-box">{recommend_action}</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================
