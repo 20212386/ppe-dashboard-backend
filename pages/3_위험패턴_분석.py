@@ -8,7 +8,7 @@ st.set_page_config(page_title="위험패턴 분석", page_icon="📊", layout="w
 API_BASE = "https://ppe-dashboard-backend.onrender.com"
 
 # =========================
-# 1. 스타일 (튀어나온 글씨 칼각 고정!)
+# 1. 스타일
 # =========================
 st.markdown("""
 <style>
@@ -20,7 +20,6 @@ st.markdown("""
 .section-title { font-size: 1.12rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; }
 .section-sub { color: #64748b; font-size: 0.86rem; margin-bottom: 0.95rem; }
 
-/* KPI 카드 높이 및 글씨 크기 고정 */
 .metric-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 18px 20px; height: 145px; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05); }
 .metric-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .metric-label { color: #64748b; font-size: 0.9rem; margin-bottom: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -37,11 +36,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================
-# 2. 렌더링 함수들 (이쑤시개/소수점 완벽 차단 로직)
+# 2. 렌더링 함수들
 # =========================
 def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, icon_bg, icon_fg, icon_symbol):
-    st.markdown(
-        f"""
+    st.markdown(f"""
         <div class="metric-card" style="border-left:6px solid {accent};">
             <div class="metric-top">
                 <div style="width: 75%; overflow: hidden;">
@@ -52,8 +50,7 @@ def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, ico
                 <div class="metric-icon" style="background:{icon_bg}; color:{icon_fg};">{icon_symbol}</div>
             </div>
         </div>
-        """, unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
 def render_empty_chart_message(message: str):
     st.markdown(f'<div class="analysis-guide">{message}</div>', unsafe_allow_html=True)
@@ -68,42 +65,45 @@ def fetch_analysis_data(params: dict):
         st.error(f"분석 데이터 조회 실패: {e}")
         return None
 
-def _safe_counts_df(df_data) -> pd.DataFrame:
+# 💡 핵심 수술 부위: 0건이라도 기획서에 있는 기본 항목은 무조건 바닥에 깔아둔다!
+def _safe_counts_df(df_data, all_categories=None) -> pd.DataFrame:
     df = pd.DataFrame(df_data)
     if df.empty or "label" not in df.columns or "count" not in df.columns:
-        return pd.DataFrame(columns=["label", "count"])
-    df["label"] = df["label"].fillna("").astype(str)
-    df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0).astype(int)
+        df = pd.DataFrame(columns=["label", "count"])
+    else:
+        df["label"] = df["label"].fillna("").astype(str)
+        df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0).astype(int)
+
+    if all_categories:
+        cat_df = pd.DataFrame({"label": all_categories})
+        df = pd.merge(cat_df, df, on="label", how="left").fillna(0)
+        df["count"] = df["count"].astype(int)
+        
     return df[df["label"] != ""].reset_index(drop=True)
 
 def create_beautiful_chart(df, color, line_color, is_horizontal=False):
     x_data = df["label"].tolist()
     y_data = df["count"].tolist()
     
-    # 💡 1. 눈금 자동 조절 (바코드 방지!)
-    # 데이터가 10건 이하일 때만 1단위로 그리고, 그 이상이면 알아서 듬성듬성(50, 100...) 그리게 냅둠
     max_val = max(y_data) if y_data else 0
     tick_step = 1 if max_val <= 10 else None
-    
-    # 💡 2. 막대기 다이어트 (아까보다 날씬한 0.45 비율로 고정)
+    y_max = max(max_val + (max_val*0.2), 4) # 공간 여유 확보
     bar_width = 0.45
 
     if is_horizontal:
         fig = go.Figure(go.Bar(
             x=y_data, y=x_data, orientation="h", width=bar_width,
             marker=dict(color=color, line=dict(color=line_color, width=1.5))
-            # 💡 3. text 관련 파라미터 삭제 (막대 안 숫자 제거)
         ))
-        fig.update_xaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", dtick=tick_step)
+        fig.update_xaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", dtick=tick_step, range=[0, y_max])
         fig.update_yaxes(autorange="reversed", type="category")
     else:
         fig = go.Figure(go.Bar(
             x=x_data, y=y_data, width=bar_width,
             marker=dict(color=color, line=dict(color=line_color, width=1.5))
-            # 💡 3. text 관련 파라미터 삭제 (막대 안 숫자 제거)
         ))
         fig.update_xaxes(type="category")
-        fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", dtick=tick_step)
+        fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", dtick=tick_step, range=[0, y_max])
         
     fig.update_layout(height=320, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", showlegend=False)
     return fig
@@ -137,12 +137,8 @@ with f8:
 st.markdown('</div>', unsafe_allow_html=True)
 
 params = {
-    "start_date": start_date or None,
-    "end_date": end_date or None,
-    "site": site or None,
-    "zone": zone or None,
-    "task_type": task_type or None,
-    "ppe_type": ppe_type or None,
+    "start_date": start_date or None, "end_date": end_date or None, "site": site or None,
+    "zone": zone or None, "task_type": task_type or None, "ppe_type": ppe_type or None,
     "risk_exposure": (1 if risk_exposure == "O" else 0) if risk_exposure in ["O", "X"] else None,
 }
 
@@ -159,15 +155,18 @@ if analysis_data:
 else:
     count, kpis, charts, recommend_action = 0, {}, {}, "필터를 설정한 뒤 '분석 실행' 버튼을 눌러주세요."
 
-time_df = _safe_counts_df(charts.get("time_chart", []))
-ppe_df = _safe_counts_df(charts.get("ppe_chart", []))
-zone_df = _safe_counts_df(charts.get("zone_chart", []))
-task_df = _safe_counts_df(charts.get("task_chart", []))
+# 💡 차트에 기본으로 띄울 필수 항목 이름들 (기획서 반영!)
+time_cats = ["오전", "점심직후", "오후"]
+ppe_cats = ["안전모", "랜야드", "장갑"]
+zone_cats = ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]
+task_cats = ["고소작업", "절단작업", "자재운반", "설비점검"]
 
-top_time = kpis.get("top_time") or "-"
-top_zone = kpis.get("top_zone") or "-"
-top_task = kpis.get("top_task_type") or "-"
-top_ppe = kpis.get("top_ppe") or "-"
+time_df = _safe_counts_df(charts.get("time_chart", []), time_cats)
+ppe_df = _safe_counts_df(charts.get("ppe_chart", []), ppe_cats)
+zone_df = _safe_counts_df(charts.get("zone_chart", []), zone_cats)
+task_df = _safe_counts_df(charts.get("task_chart", []), task_cats)
+
+top_time, top_zone, top_task, top_ppe = kpis.get("top_time") or "-", kpis.get("top_zone") or "-", kpis.get("top_task_type") or "-", kpis.get("top_ppe") or "-"
 
 # =========================
 # 4. KPI 카드 & 통계
@@ -181,14 +180,13 @@ with c4: render_metric_card("가장 많이 누락된 PPE", top_ppe, "누락 상�
 st.markdown(f'<div class="small-stat">현재 필터 조건에 맞는 데이터 건수: <b>{count}</b></div>', unsafe_allow_html=True)
 
 # =========================
-# 5. 차트 렌더링 (진짜 완벽한 디자인)
+# 5. 차트 렌더링
 # =========================
 r1c1, r1c2 = st.columns(2)
 
 with r1c1:
     st.markdown('<div class="section-card"><div class="section-title">시간대별 위반 건수</div><div class="section-sub">시간대별 반복 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
-    elif time_df.empty: render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
     else:
         fig_time = create_beautiful_chart(time_df, "rgba(59, 130, 246, 0.65)", "#2563eb", False)
         st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
@@ -198,7 +196,6 @@ with r1c1:
 with r1c2:
     st.markdown('<div class="section-card"><div class="section-title">PPE별 위반 건수</div><div class="section-sub">누락 빈도가 높은 보호구를 확인합니다</div>', unsafe_allow_html=True)
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
-    elif ppe_df.empty: render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
     else:
         fig_ppe = create_beautiful_chart(ppe_df, "rgba(139, 92, 246, 0.65)", "#7c3aed", False)
         st.plotly_chart(fig_ppe, use_container_width=True, config={"displayModeBar": False})
@@ -210,7 +207,6 @@ r2c1, r2c2 = st.columns(2)
 with r2c1:
     st.markdown('<div class="section-card"><div class="section-title">구역별 위반 건수</div><div class="section-sub">어느 작업구역에서 위반이 반복되는지 확인합니다</div>', unsafe_allow_html=True)
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
-    elif zone_df.empty: render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
     else:
         fig_zone = create_beautiful_chart(zone_df, "rgba(14, 165, 233, 0.65)", "#0284c7", True)
         st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
@@ -220,7 +216,6 @@ with r2c1:
 with r2c2:
     st.markdown('<div class="section-card"><div class="section-title">작업유형별 반복 횟수</div><div class="section-sub">반복 개입 우선순위가 높은 작업유형을 확인합니다</div>', unsafe_allow_html=True)
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
-    elif task_df.empty: render_empty_chart_message("🚨 <b>조건에 맞는 데이터가 없습니다.</b>")
     else:
         fig_task = create_beautiful_chart(task_df, "rgba(168, 85, 247, 0.65)", "#9333ea", True)
         st.plotly_chart(fig_task, use_container_width=True, config={"displayModeBar": False})
