@@ -76,31 +76,34 @@ def _safe_counts_df(df_data) -> pd.DataFrame:
     df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0).astype(int)
     return df[df["label"] != ""].reset_index(drop=True)
 
-def create_beautiful_chart(df, color, line_color, is_horizontal=False):
-    # 💡 에러 원인 완벽 차단! Plotly가 데이터를 못 읽고 0으로 뭉개는 버그 방지 (.tolist() 변환)
+ddef create_beautiful_chart(df, color, line_color, is_horizontal=False):
     x_data = df["label"].tolist()
     y_data = df["count"].tolist()
     
+    # 💡 1. 눈금 자동 조절 (바코드 방지!)
+    # 데이터가 10건 이하일 때만 1단위로 그리고, 그 이상이면 알아서 듬성듬성(50, 100...) 그리게 냅둠
     max_val = max(y_data) if y_data else 0
-    y_max = max(max_val + 1.5, 4) 
-    bar_width = 0.35 if len(x_data) <= 2 else None 
+    tick_step = 1 if max_val <= 10 else None
+    
+    # 💡 2. 막대기 다이어트 (아까보다 날씬한 0.45 비율로 고정)
+    bar_width = 0.45
 
     if is_horizontal:
         fig = go.Figure(go.Bar(
             x=y_data, y=x_data, orientation="h", width=bar_width,
-            marker=dict(color=color, line=dict(color=line_color, width=1.5)),
-            text=y_data, textposition="auto" # 💡 막대기 안에 예쁘게 건수(숫자) 표시!
+            marker=dict(color=color, line=dict(color=line_color, width=1.5))
+            # 💡 3. text 관련 파라미터 삭제 (막대 안 숫자 제거)
         ))
-        fig.update_xaxes(showgrid=True, gridcolor="#f1f5f9", dtick=1, range=[0, y_max])
+        fig.update_xaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", dtick=tick_step)
         fig.update_yaxes(autorange="reversed", type="category")
     else:
         fig = go.Figure(go.Bar(
             x=x_data, y=y_data, width=bar_width,
-            marker=dict(color=color, line=dict(color=line_color, width=1.5)),
-            text=y_data, textposition="auto" # 💡 막대기 안에 예쁘게 건수(숫자) 표시!
+            marker=dict(color=color, line=dict(color=line_color, width=1.5))
+            # 💡 3. text 관련 파라미터 삭제 (막대 안 숫자 제거)
         ))
         fig.update_xaxes(type="category")
-        fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", dtick=1, range=[0, y_max])
+        fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", rangemode="tozero", dtick=tick_step)
         
     fig.update_layout(height=320, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", showlegend=False)
     return fig
