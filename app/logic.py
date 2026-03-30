@@ -183,14 +183,15 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
     t_cats = ["오전", "점심직후", "오후"]
     p_cats = ["안전모", "랜야드", "장갑"]
     z_cats = ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]
-    tk_cats = ["고소작업", "절단작업", "자재운반", "설비점검"]
+    # 💡 작업유형 대신 팀(Team) 카테고리 추가!
+    tm_cats = ["A팀", "B팀", "C팀", "D팀"]
 
     if df.empty:
         return {
             "time_chart": [{"label": c, "count": 0} for c in t_cats], 
             "ppe_chart": [{"label": c, "count": 0} for c in p_cats], 
             "zone_chart": [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats], 
-            "task_chart": [{"label": c, "count": 0} for c in tk_cats]
+            "team_chart": [{"label": c, "count": 0} for c in tm_cats]  # 💡 팀 추가
         }
 
     t_counts = df["time_slot"].replace("", pd.NA).dropna().value_counts() if "time_slot" in df.columns else {}
@@ -199,8 +200,9 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
     p_counts = df["missed_ppe"].replace("", pd.NA).dropna().value_counts() if "missed_ppe" in df.columns else {}
     ppe_chart = [{"label": c, "count": int(p_counts.get(c, 0))} for c in p_cats]
 
-    tk_counts = df["task_type"].replace("", pd.NA).dropna().value_counts() if "task_type" in df.columns else {}
-    task_chart = [{"label": c, "count": int(tk_counts.get(c, 0))} for c in tk_cats]
+    # 💡 작업유형(task_type) 계산을 날리고, 팀(team) 계산으로 교체!
+    tm_counts = df["team"].replace("", pd.NA).dropna().value_counts() if "team" in df.columns else {}
+    team_chart = [{"label": c, "count": int(tm_counts.get(c, 0))} for c in tm_cats]
 
     zone_chart = []
     if "zone" in df.columns and "is_violated" in df.columns:
@@ -211,27 +213,19 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
             total = len(group)
             viol = int((group["is_violated"] == 1).sum())
             
-            # 💡 [핵심 수술] 최소 분모 10명 보정 적용!
             smoothed_total = max(total, 10)
-            
             if total > 0:
                 r_rate = round((viol / smoothed_total) * 100, 1)
                 c_rate = round(100.0 - r_rate, 1)
             else:
-                r_rate = 0.0
-                c_rate = 0.0
+                r_rate, c_rate = 0.0, 0.0
                 
-            zone_chart.append({
-                "label": z, 
-                "count": viol, 
-                "compliance_rate": c_rate, 
-                "risk_rate": r_rate
-            })
+            zone_chart.append({"label": z, "count": viol, "compliance_rate": c_rate, "risk_rate": r_rate})
     else:
         zone_chart = [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats]
 
-    # 🚨 [가장 중요한 부분] 이 줄이 없어서 차트가 0으로 죽어버렸던 겁니다!! 🚨
-    return {"time_chart": time_chart, "ppe_chart": ppe_chart, "zone_chart": zone_chart, "task_chart": task_chart}
+    # 💡 리턴에 team_chart 넣기!
+    return {"time_chart": time_chart, "ppe_chart": ppe_chart, "zone_chart": zone_chart, "team_chart": team_chart}
 
 def get_recommend_action(df: pd.DataFrame) -> str:
     if df.empty: return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 점검을 유지하세요."
