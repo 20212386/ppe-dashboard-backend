@@ -16,7 +16,6 @@ def fetch_dashboard_data(target_date: str, site: str):
         params = {"target_date": target_date}
         if site and site != "전체 현장":
             params["site"] = site
-        # 💡 [핵심] GPT가 망쳐놓은 주소 다시 복구! (+ 타임아웃 넉넉히 60초)
         res = requests.get(f"{API_BASE_URL}/dashboard/today", params=params, timeout=60)
         res.raise_for_status()
         return res.json()
@@ -58,7 +57,7 @@ def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, ico
     )
 
 # =========================
-# 스타일 (토스/애플 감성 완벽 이식)
+# 스타일 
 # =========================
 st.markdown("""
 <style>
@@ -127,7 +126,7 @@ else:
     hourly_df = base_time.copy()
     hourly_df["count"] = 0
 
-# 구역 고정 및 데이터 처리 (가짜 85% 없음!)
+# 구역 고정 및 데이터 처리
 base_zones = pd.DataFrame({"zone": ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]})
 zone_data = pd.DataFrame(charts.get("zone_risk_scores", []))
 
@@ -199,7 +198,22 @@ with row2_col1:
     st.markdown('</div>', unsafe_allow_html=True)
 
 with row2_col2:
-    st.markdown('<div class="section-card" style="height: 485px;">', unsafe_allow_html=True)
-    st.markdown('<div class="ai-title-row"><div class="ai-emoji">🧠</div><div class="ai-title">AI 안전 분석</div></div><div class="ai-sub">실시간 패턴 분석 기반 요약</div><ul class="ai-list">', unsafe_allow_html=True)
-    for item in ai_summary_items: st.markdown(f"<li>{item}</li>", unsafe_allow_html=True)
-    st.markdown('</ul><div class="ai-updated">마지막 업데이트: 방금 전</div></div>', unsafe_allow_html=True)
+    # 💡 [핵심 해결] HTML을 하나의 문자열(String)로 완벽하게 조립해서 한 방에 전송!
+    ai_html = f"""
+    <div class="section-card" style="height: 485px;">
+        <div class="ai-title-row">
+            <div class="ai-emoji">🧠</div>
+            <div class="ai-title">AI 안전 분석</div>
+        </div>
+        <div class="ai-sub">실시간 패턴 분석 기반 요약</div>
+        <ul class="ai-list">
+    """
+    for item in ai_summary_items:
+        ai_html += f"<li>{item}</li>"
+    
+    ai_html += """
+        </ul>
+        <div class="ai-updated">마지막 업데이트: 방금 전</div>
+    </div>
+    """
+    st.markdown(ai_html, unsafe_allow_html=True)
