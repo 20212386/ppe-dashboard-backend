@@ -1,14 +1,17 @@
-import streamlit as st
-import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import sys
 import os
 
-# 💡 상위 폴더에 있는 logic.py를 안전하게 불러오기 위한 세팅
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-import logic
+# 💡 [핵심 해결책] Streamlit Cloud 환경을 위해 부모 폴더(루트)를 경로에 강제 추가!
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+
+import logic # 이제 무조건 찾을 수 있음!
+
 
 # --- 공통 UI 스타일링 ---
 def apply_toss_style(fig):
