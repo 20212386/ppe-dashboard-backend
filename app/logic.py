@@ -183,57 +183,125 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
     t_cats = ["오전", "점심직후", "오후"]
     p_cats = ["안전모", "랜야드", "장갑"]
     z_cats = ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]
-    # 💡 작업유형 대신 팀(Team) 카테고리 추가!
     tm_cats = ["A팀", "B팀", "C팀", "D팀"]
+    tsk_cats = ["고소작업", "절단작업", "자재운반", "설비점검"]
 
     if df.empty:
         return {
-            "time_chart": [{"label": c, "count": 0} for c in t_cats], 
-            "ppe_chart": [{"label": c, "count": 0} for c in p_cats], 
-            "zone_chart": [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats], 
-            "team_chart": [{"label": c, "count": 0} for c in tm_cats]  # 💡 팀 추가
+            "time_chart": [{"label": c, "count": 0} for c in t_cats],
+            "ppe_chart": [{"label": c, "count": 0} for c in p_cats],
+            "zone_chart": [
+                {"label": c, "count": 0, "compliance_rate": 0.0, "risk_rate": 0.0}
+                for c in z_cats
+            ],
+            "task_chart": [{"label": c, "count": 0} for c in tsk_cats],
+            "team_chart": [{"label": c, "count": 0} for c in tm_cats],
         }
 
-    t_counts = df["time_slot"].replace("", pd.NA).dropna().value_counts() if "time_slot" in df.columns else {}
+    # 1) 시간대 차트
+    t_counts = (
+        df["time_slot"].replace("", pd.NA).dropna().value_counts()
+        if "time_slot" in df.columns else {}
+    )
     time_chart = [{"label": c, "count": int(t_counts.get(c, 0))} for c in t_cats]
 
-    p_counts = df["missed_ppe"].replace("", pd.NA).dropna().value_counts() if "missed_ppe" in df.columns else {}
+    # 2) PPE 차트
+    p_counts = (
+        df["missed_ppe"].replace("", pd.NA).dropna().value_counts()
+        if "missed_ppe" in df.columns else {}
+    )
     ppe_chart = [{"label": c, "count": int(p_counts.get(c, 0))} for c in p_cats]
 
-    # 💡 작업유형(task_type) 계산을 날리고, 팀(team) 계산으로 교체!
-    tm_counts = df["team"].replace("", pd.NA).dropna().value_counts() if "team" in df.columns else {}
-    team_chart = [{"label": c, "count": int(tm_counts.get(c, 0))} for c in tm_cats]
+    # 3) 작업유형 차트
+    task_counts = (
+        df["task_type"].replace("", pd.NA).dropna().value_counts()
+        if "task_type" in df.columns else {}
+    )
+    task_chart = [{"label": c, "count": int(task_counts.get(c, 0))} for c in tsk_cats]
 
+    # 4) 팀 차트
+    team_counts = (
+        df["team"].replace("", pd.NA).dropna().value_counts()
+        if "team" in df.columns else {}
+    )
+    team_chart = [{"label": c, "count": int(team_counts.get(c, 0))} for c in tm_cats]
+
+    # 5) 구역별 준수율 / 위험도 차트
     zone_chart = []
     if "zone" in df.columns and "is_violated" in df.columns:
         temp_z = df.copy()
         temp_z["zone"] = temp_z["zone"].astype(str).str.strip()
+
         for z in z_cats:
             group = temp_z[temp_z["zone"] == z]
             total = len(group)
             viol = int((group["is_violated"] == 1).sum())
-            
-            smoothed_total = max(total, 10)
-            if total > 0:
-                r_rate = round((viol / smoothed_total) * 100, 1)
-                c_rate = round(100.0 - r_rate, 1)
-            else:
-                r_rate, c_rate = 0.0, 0.0
-                
-            zone_chart.append({"label": z, "count": viol, "compliance_rate": c_rate, "risk_rate": r_rate})
-    else:
-        zone_chart = [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats]
 
-    # 💡 리턴에 team_chart 넣기!
-    return {"time_chart": time_chart, "ppe_chart": ppe_chart, "zone_chart": zone_chart, "team_chart": team_chart}
+            # 표본이 너무 적을 때 100%로 튀는 것 완화
+            smoothed_total = max(total, 10)
+
+            if total > 0:
+                risk_rate = round((viol / smoothed_total) * 100, 1)
+                compliance_rate = round(100.0 - risk_rate, 1)
+            else:
+                risk_rate = 0.0
+                compliance_rate = 0.0
+
+            zone_chart.append({
+                "label": z,
+                "count": viol,
+                "compliance_rate": compliance_rate,
+                "risk_rate": risk_rate
+            })
+    else:
+        zone_chart = [
+            {"label": c, "count": 0, "compliance_rate": 0.0, "risk_rate": 0.0}
+            for c in z_cats
+        ]
+
+    return {
+        "time_chart": time_chart,
+        "ppe_chart": ppe_chart,
+        "zone_chart": zone_chart,
+        "task_chart": task_chart,
+        "team_chart": team_chart,
+    }
+
 
 def get_recommend_action(df: pd.DataFrame) -> str:
-    if df.empty: return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 점검을 유지하세요."
-    top_z = df["zone"].replace("", pd.NA).dropna().value_counts().idxmax() if not df["zone"].replace("", pd.NA).dropna().empty else "-"
-    top_t = df["task_type"].replace("", pd.NA).dropna().value_counts().idxmax() if not df["task_type"].replace("", pd.NA).dropna().empty else "-"
-    top_p = df["missed_ppe"].replace("", pd.NA).dropna().value_counts().idxmax() if not df["missed_ppe"].replace("", pd.NA).dropna().empty else "-"
-    if top_p != "-" and top_t != "-": return f"{top_t} 작업 전 {top_p} 착용 여부를 우선 점검하세요."
-    if top_z != "-": return f"{top_z} 구역 반복 패턴을 우선 점검하세요."
+    if df.empty:
+        return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 점검을 유지하세요."
+
+    top_zone = (
+        df["zone"].replace("", pd.NA).dropna().value_counts().idxmax()
+        if "zone" in df.columns and not df["zone"].replace("", pd.NA).dropna().empty
+        else "-"
+    )
+    top_task = (
+        df["task_type"].replace("", pd.NA).dropna().value_counts().idxmax()
+        if "task_type" in df.columns and not df["task_type"].replace("", pd.NA).dropna().empty
+        else "-"
+    )
+    top_ppe = (
+        df["missed_ppe"].replace("", pd.NA).dropna().value_counts().idxmax()
+        if "missed_ppe" in df.columns and not df["missed_ppe"].replace("", pd.NA).dropna().empty
+        else "-"
+    )
+    top_team = (
+        df["team"].replace("", pd.NA).dropna().value_counts().idxmax()
+        if "team" in df.columns and not df["team"].replace("", pd.NA).dropna().empty
+        else "-"
+    )
+
+    if top_team != "-" and top_ppe != "-":
+        return f"{top_team}의 {top_ppe} 착용 여부를 우선 점검하세요."
+
+    if top_task != "-" and top_ppe != "-":
+        return f"{top_task} 작업 전 {top_ppe} 착용 여부를 우선 점검하세요."
+
+    if top_zone != "-":
+        return f"{top_zone} 구역 반복 패턴을 우선 점검하세요."
+
     return "반복 위반 상위 조건을 우선 점검하세요."
 
 # =========================

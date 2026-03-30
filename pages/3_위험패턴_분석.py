@@ -141,13 +141,21 @@ time_cats = ["오전", "점심직후", "오후"]
 ppe_cats = ["안전모", "랜야드", "장갑"]
 zone_cats = ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]
 task_cats = ["고소작업", "절단작업", "자재운반", "설비점검"]
+team_cats = ["A팀", "B팀", "C팀", "D팀"]
 
 time_df = _safe_counts_df(charts.get("time_chart", []), time_cats)
 ppe_df = _safe_counts_df(charts.get("ppe_chart", []), ppe_cats)
 zone_df = _safe_counts_df(charts.get("zone_chart", []), zone_cats)
 task_df = _safe_counts_df(charts.get("task_chart", []), task_cats)
+team_df = _safe_counts_df(charts.get("team_chart", []), team_cats)
 
-top_time, top_zone, top_task, top_ppe = kpis.get("top_time") or "-", kpis.get("top_zone") or "-", kpis.get("top_task_type") or "-", kpis.get("top_ppe") or "-"
+top_time = kpis.get("top_time") or "-"
+top_zone = kpis.get("top_zone") or "-"
+top_task = kpis.get("top_task_type") or "-"
+top_ppe = kpis.get("top_ppe") or "-"
+
+is_risk_selected = risk_exposure in ["O", "X"]
+
 
 # =========================
 # 4. KPI 카드 (1페이지와 동일한 색상 매칭!)
@@ -195,49 +203,158 @@ with r1c2:
 r2c1, r2c2 = st.columns(2)
 
 with r2c1:
-    st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
-    if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+    if is_risk_selected:
+        st.markdown('<div class="section-card"><div class="section-title">팀별 위반 건수</div><div class="section-sub">위험노출 여부 선택 시 팀별 분포로 전환됩니다</div>', unsafe_allow_html=True)
+
+        if analysis_data is None:
+            render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+        else:
+            fig_team_left = go.Figure(go.Bar(
+                x=team_df["label"].tolist(),
+                y=team_df["count"].tolist(),
+                marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)),
+                width=0.45,
+                hovertemplate="팀: %{x}<br>건수: %{y}건<extra></extra>"
+            ))
+
+            y_max = max(4, int(team_df["count"].max()) * 1.3)
+            fig_team_left.update_layout(
+                height=360,
+                margin=dict(l=10, r=10, t=10, b=10),
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                showlegend=False,
+                yaxis=dict(
+                    range=[0, y_max],
+                    showgrid=True,
+                    gridcolor="#f1f5f9",
+                    zeroline=False,
+                    tickfont=dict(color="#94a3b8")
+                ),
+                xaxis=dict(showgrid=False)
+            )
+            st.plotly_chart(fig_team_left, use_container_width=True, config={"displayModeBar": False}, key="p3_team_left_chart")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
     else:
-        fig_zone = go.Figure()
-        fig_zone.add_trace(go.Bar(
-            x=zone_df["label"].tolist(), y=zone_df["compliance_rate"].tolist(), 
-            name="준수율 %", marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)), 
-            width=0.35, hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
-        ))
-        fig_zone.add_trace(go.Bar(
-            x=zone_df["label"].tolist(), y=zone_df["risk_rate"].tolist(), 
-            name="위험도 %", marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)), 
-            width=0.35, hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
-        ))
-        
-        fig_zone.update_layout(
-            barmode="group", height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
-            showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
-            bargap=0.4, bargroupgap=0.05,
-            yaxis=dict(range=[0, 115], showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(color="#94a3b8"), ticksuffix="%"),
-            xaxis=dict(showgrid=False)
-        )
-        st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False}, key="p3_zone_chart")
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
+
+        if analysis_data is None:
+            render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+        else:
+            fig_zone = go.Figure()
+            fig_zone.add_trace(go.Bar(
+                x=zone_df["label"].tolist(),
+                y=zone_df["compliance_rate"].tolist(),
+                name="준수율 %",
+                marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)),
+                width=0.35,
+                hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
+            ))
+            fig_zone.add_trace(go.Bar(
+                x=zone_df["label"].tolist(),
+                y=zone_df["risk_rate"].tolist(),
+                name="위험도 %",
+                marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)),
+                width=0.35,
+                hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
+            ))
+
+            fig_zone.update_layout(
+                barmode="group",
+                height=360,
+                margin=dict(l=10, r=10, t=10, b=10),
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
+                bargap=0.4,
+                bargroupgap=0.05,
+                yaxis=dict(
+                    range=[0, 115],
+                    showgrid=True,
+                    gridcolor="#f1f5f9",
+                    zeroline=False,
+                    tickfont=dict(color="#94a3b8"),
+                    ticksuffix="%"
+                ),
+                xaxis=dict(showgrid=False)
+            )
+            st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False}, key="p3_zone_chart")
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
 with r2c2:
-    st.markdown('<div class="section-card"><div class="section-title">작업유형별 위반 분포</div><div class="section-sub">개입이 필요한 고위험 작업유형 분포를 확인합니다</div>', unsafe_allow_html=True)
-    if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+    if is_risk_selected:
+        st.markdown('<div class="section-card"><div class="section-title">팀별 위반 분포</div><div class="section-sub">위험노출 여부 선택 시 팀별 반복 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
+
+        if analysis_data is None:
+            render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+        else:
+            fig_team = go.Figure(go.Bar(
+                y=team_df["label"].tolist(),
+                x=team_df["count"].tolist(),
+                orientation="h",
+                marker=dict(color="#3b82f6", line=dict(color="#2563eb", width=1.0)),
+                width=0.4,
+                hovertemplate="팀: %{y}<br>건수: %{x}건<extra></extra>"
+            ))
+
+            x_max = max(4, int(team_df["count"].max()) * 1.3)
+            fig_team.update_layout(
+                height=360,
+                margin=dict(l=10, r=10, t=10, b=10),
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                showlegend=False,
+                yaxis=dict(autorange="reversed", showgrid=False),
+                xaxis=dict(
+                    showgrid=True,
+                    gridcolor="#f1f5f9",
+                    zeroline=False,
+                    tickfont=dict(color="#94a3b8"),
+                    range=[0, x_max]
+                )
+            )
+            st.plotly_chart(fig_team, use_container_width=True, config={"displayModeBar": False}, key="p3_team_chart")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
     else:
-        fig_task = go.Figure(go.Bar(
-            y=task_df["label"].tolist(), x=task_df["count"].tolist(), orientation="h", 
-            marker=dict(color="#3b82f6", line=dict(color="#2563eb", width=1.0)), 
-            width=0.4, hovertemplate="작업유형: %{y}<br>건수: %{x}건<extra></extra>"
-        ))
-        x_max = max(4, int(task_df["count"].max()) * 1.3)
-        fig_task.update_layout(
-            height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
-            showlegend=False,
-            yaxis=dict(autorange="reversed", showgrid=False),
-            xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(color="#94a3b8"), range=[0, x_max])
-        )
-        st.plotly_chart(fig_task, use_container_width=True, config={"displayModeBar": False}, key="p3_task_chart")
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-card"><div class="section-title">작업유형별 위반 분포</div><div class="section-sub">개입이 필요한 고위험 작업유형 분포를 확인합니다</div>', unsafe_allow_html=True)
+
+        if analysis_data is None:
+            render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+        else:
+            fig_task = go.Figure(go.Bar(
+                y=task_df["label"].tolist(),
+                x=task_df["count"].tolist(),
+                orientation="h",
+                marker=dict(color="#3b82f6", line=dict(color="#2563eb", width=1.0)),
+                width=0.4,
+                hovertemplate="작업유형: %{y}<br>건수: %{x}건<extra></extra>"
+            ))
+
+            x_max = max(4, int(task_df["count"].max()) * 1.3)
+            fig_task.update_layout(
+                height=360,
+                margin=dict(l=10, r=10, t=10, b=10),
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                showlegend=False,
+                yaxis=dict(autorange="reversed", showgrid=False),
+                xaxis=dict(
+                    showgrid=True,
+                    gridcolor="#f1f5f9",
+                    zeroline=False,
+                    tickfont=dict(color="#94a3b8"),
+                    range=[0, x_max]
+                )
+            )
+            st.plotly_chart(fig_task, use_container_width=True, config={"displayModeBar": False}, key="p3_task_chart")
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="section-card"><div class="section-title">추천 개입 조치</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="recommend-box">{recommend_action}</div></div>', unsafe_allow_html=True)
