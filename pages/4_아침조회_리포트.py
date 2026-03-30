@@ -30,30 +30,41 @@ def fetch_tbm_report(target_date=None):
 # =========================
 st.markdown("""
 <style>
-.block-container { padding-top: 2.4rem; padding-bottom: 2rem; max-width: 1480px; }
-.main-title { font-size: 2.1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.2rem; letter-spacing: -0.02em; }
-.sub-title { color: #64748b; font-size: 1rem; margin-bottom: 1rem; }
-.section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
-.section-title { font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 0.8rem; }
-.section-sub { color: #64748b; font-size: 0.86rem; margin-bottom: 1rem; }
-.metric-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px 22px; min-height: 145px; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05); }
-.metric-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
-.metric-label { color: #64748b; font-size: 0.92rem; margin-bottom: 10px; font-weight: 600; }
-.metric-value-lg { color: #0f172a; font-size: 2rem; font-weight: 800; line-height: 1.1; margin-bottom: 10px; letter-spacing: -0.03em; }
-.metric-value-md { color: #0f172a; font-size: 1.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.02em; }
-.metric-badge { display: inline-block; padding: 6px 11px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }
-.metric-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0; }
-.script-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 18px; padding: 18px; color: #334155; font-size: 1rem; line-height: 1.8; white-space: pre-wrap; }
-.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; }
-.stat-row:last-child { border-bottom: none; }
-.stat-name { color: #64748b; font-weight: 700; }
-.stat-value { color: #0f172a; font-weight: 800; font-size: 1.5rem; }
-.check-item { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; color: #92400e; font-size: 0.92rem; line-height: 1.55; font-weight: 700; }
-.focus-box { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #93c5fd; border-radius: 18px; padding: 18px; color: #1e3a8a; font-size: 1rem; line-height: 1.7; font-weight: 700; }
-.stButton > button { border-radius: 14px; font-weight: 700; min-height: 44px; }
+.block-container { padding-top: 1.7rem; padding-bottom: 2rem; max-width: 1500px; }
+.main-title { font-size: 2.15rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+.main-subtitle { font-size: 0.98rem; color: #64748b; margin-bottom: 1.1rem; }
+.section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
+.section-title { font-size: 1.16rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem; }
+.section-sub { color: #64748b; font-size: 0.88rem; margin-bottom: 1.2rem; }
+
+/* 💡 [핵심] 카드 높이를 190px로 고정하고 양끝 정렬(space-between) 적용 */
+.metric-card { 
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; 
+    padding: 20px; height: 195px; 
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 0.8rem;
+    display: flex; flex-direction: column; justify-content: space-between; 
+}
+.metric-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.metric-title { color: #64748b; font-size: 0.95rem; font-weight: 700; line-height: 1.4; word-break: keep-all; }
+.metric-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+.metric-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+
+/* 💡 [핵심] 폰트 크기 살짝 줄이고 단어 안 끊어지게 (keep-all) 설정 */
+.metric-value { color: #0f172a; font-size: 1.5rem; font-weight: 800; line-height: 1.3; word-break: keep-all; }
+.metric-badge { display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 800; }
+
+.insight-box { border-radius: 16px; padding: 16px 18px; margin-top: 0.5rem; font-size: 0.92rem; font-weight: 700; border: 1px solid; line-height: 1.6; }
+.ai-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 0.25rem; }
+.ai-emoji { font-size: 1.4rem; }
+.ai-title { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
+.ai-sub { color: #64748b; font-size: 0.88rem; margin-bottom: 1rem; }
+.ai-list { margin: 0; padding-left: 1.2rem; }
+.ai-list li { margin-bottom: 0.9rem; color: #334155; line-height: 1.6; font-size: 0.95rem; }
+.ai-updated { color: #94a3b8; font-size: 0.84rem; font-weight: 600; margin-top: 1.5rem; }
+.caption-note { color: #64748b; font-size: 0.88rem; margin-top: 0.3rem; margin-bottom: 1.5rem; }
+.stButton > button { border-radius: 14px; font-weight: 800; min-height: 44px; }
 </style>
 """, unsafe_allow_html=True)
-
 # =========================
 # 렌더
 # =========================
