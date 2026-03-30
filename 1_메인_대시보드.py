@@ -53,7 +53,7 @@ def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, ico
     )
 
 # =========================
-# 스타일 (Toss/Apple 감성 100% 이식)
+# 스타일 
 # =========================
 st.markdown("""
 <style>
@@ -126,13 +126,9 @@ ai_summary_items = build_ai_summary(str(target_date), weakest_zone_name, weakest
 # KPI 카드
 # =========================
 c1, c2, c3, c4 = st.columns(4)
-# 💡 [컬러 매칭 1] 쨍한 파란색 (#3b82f6)
 with c1: render_metric_card("위험노출 대비 PPE 준수율", kpi.get("compliance_rate_text", f"{round(compliance_rate, 2)}%"), "실시간 집계", "#3b82f6", "#eff6ff", "#2563eb", "#e0e7ff", "#3b82f6", "🛡️")
-# 💡 [컬러 매칭 2] 쨍한 빨간색 (#ef4444)
 with c2: render_metric_card("오늘 가장 취약한 구역", weakest_zone_name, f"위험도 {weakest_zone_score}%", "#ef4444", "#fef2f2", "#b91c1c", "#fee2e2", "#ef4444", "⚠️")
-# 💡 [컬러 매칭 3] 쨍한 주황색 (#f97316)
 with c3: render_metric_card("반복 누락 PPE", most_missing_ppe_name, f"{most_missing_ppe_count}회 반복", "#f97316", "#fff7ed", "#c2410c", "#ffedd5", "#f97316", "🦺")
-# 💡 [컬러 매칭 4] TBM 보라색 (#a855f7)
 with c4: render_metric_card("우선 개입 필요 작업", priority_task_text, "우선 확인", "#a855f7", "#faf5ff", "#7e22ce", "#f3e8ff", "#9333ea", "⏱️")
 st.markdown(f'<div class="caption-note">기준일: {target_date} · 현장: {site}</div>', unsafe_allow_html=True)
 
@@ -144,15 +140,13 @@ with row1_col1:
     st.markdown('<div class="section-card"><div class="section-title">시간대별 PPE 이탈 건수</div><div class="section-sub">시간대별 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
     fig_time = go.Figure()
     
-    # 💡 [수술 핵심] 쨍한 컬러로 변경!! (rgba 지우고 윗쪽 파랑 매칭!)
+    # 💡 text 관련 속성 싹 다 날림! hovertemplate으로 마우스 올렸을 때만 보이게!
     fig_time.add_trace(go.Bar(
         x=hourly_df["time_slot"].tolist(), 
         y=hourly_df["count"].tolist(), 
-        text=hourly_df["count"].tolist(), 
-        textposition="outside",
-        # 💡 위쪽 KPI 카드의 파랑(#3b82f6)으로 깔맞춤! 직각 유지! 외곽선은 연하게!
         marker=dict(color="#3b82f6", line=dict(color="#2563eb", width=1.0)), 
-        width=0.4
+        width=0.4,
+        hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>"
     ))
     
     y_max = max(4, int(hourly_df["count"].max()) * 1.3)
@@ -174,28 +168,22 @@ with row2_col1:
     st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
     fig_zone = go.Figure()
     
-    # 💡 [수술 핵심] 쨍한 컬러로 변경!! (rgba 지우고 진한 컬러 매칭!)
-    # 준수율 -> 진한 초록색 (#22c55e)
+    # 💡 text 관련 속성 싹 다 날림! hovertemplate 추가!
     fig_zone.add_trace(go.Bar(
         x=zone_data["zone"].tolist(), 
         y=zone_data["compliance"].tolist(), 
         name="준수율 %", 
-        text=zone_data["compliance"].round(1).tolist(),
-        texttemplate="%{text}%",
-        textposition="outside",
         marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)), 
-        width=0.35
+        width=0.35,
+        hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
     ))
-    # 위험도 -> 쨍한 빨간색 (#ef4444, 윗쪽 위험구역 카드 매칭!)
     fig_zone.add_trace(go.Bar(
         x=zone_data["zone"].tolist(), 
         y=zone_data["risk"].tolist(), 
         name="위험도 %", 
-        text=zone_data["risk"].round(1).tolist(),
-        texttemplate="%{text}%",
-        textposition="outside",
         marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)), 
-        width=0.35
+        width=0.35,
+        hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
     ))
 
     fig_zone.update_layout(
