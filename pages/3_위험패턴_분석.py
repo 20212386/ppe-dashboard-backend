@@ -195,30 +195,52 @@ with r1c2:
 r2c1, r2c2 = st.columns(2)
 
 with r2c1:
-    st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
-    if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
-    else:
-        fig_zone = go.Figure()
-        fig_zone.add_trace(go.Bar(
-            x=zone_df["label"].tolist(), y=zone_df["compliance_rate"].tolist(), 
-            name="준수율 %", marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)), 
-            width=0.35, hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
-        ))
-        fig_zone.add_trace(go.Bar(
-            x=zone_df["label"].tolist(), y=zone_df["risk_rate"].tolist(), 
-            name="위험도 %", marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)), 
-            width=0.35, hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
-        ))
+    # 💡 [핵심] 사용자가 '위험노출=O' 필터를 걸었을 때 -> "비율(%)" 대신 "건수" 차트로 변신!
+    if risk_exposure == "O":
+        st.markdown('<div class="section-card"><div class="section-title">구역별 위반 건수</div><div class="section-sub">위험노출(위반) 데이터 내 구역별 발생 건수입니다</div>', unsafe_allow_html=True)
+        if analysis_data is None: 
+            render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+        else:
+            fig_zone = go.Figure(go.Bar(
+                x=zone_df["label"].tolist(), y=zone_df["count"].tolist(), 
+                name="위반 건수", marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)), 
+                width=0.4, hovertemplate="구역: %{x}<br>위반 건수: %{y}건<extra></extra>"
+            ))
+            y_max = max(4, int(zone_df["count"].max()) * 1.3)
+            fig_zone.update_layout(
+                height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
+                showlegend=False, xaxis=dict(showgrid=False), 
+                yaxis=dict(range=[0, y_max], showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(color="#94a3b8"))
+            )
+            st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False}, key="p3_zone_chart_count")
+        st.markdown('</div>', unsafe_allow_html=True)
         
-        fig_zone.update_layout(
-            barmode="group", height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
-            showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
-            bargap=0.4, bargroupgap=0.05,
-            yaxis=dict(range=[0, 115], showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(color="#94a3b8"), ticksuffix="%"),
-            xaxis=dict(showgrid=False)
-        )
-        st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False}, key="p3_zone_chart")
-    st.markdown('</div>', unsafe_allow_html=True)
+    # 💡 사용자가 필터를 안 걸었거나 'X(정상)'를 걸었을 때 -> 원래의 "준수율 vs 위험도(%)" 차트 유지!
+    else:
+        st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
+        if analysis_data is None: 
+            render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
+        else:
+            fig_zone = go.Figure()
+            fig_zone.add_trace(go.Bar(
+                x=zone_df["label"].tolist(), y=zone_df["compliance_rate"].tolist(), 
+                name="준수율 %", marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)), 
+                width=0.35, hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
+            ))
+            fig_zone.add_trace(go.Bar(
+                x=zone_df["label"].tolist(), y=zone_df["risk_rate"].tolist(), 
+                name="위험도 %", marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)), 
+                width=0.35, hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
+            ))
+            fig_zone.update_layout(
+                barmode="group", height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
+                showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
+                bargap=0.4, bargroupgap=0.05,
+                yaxis=dict(range=[0, 115], showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(color="#94a3b8"), ticksuffix="%"),
+                xaxis=dict(showgrid=False)
+            )
+            st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False}, key="p3_zone_chart_rate")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 with r2c2:
     st.markdown('<div class="section-card"><div class="section-title">작업유형별 위반 분포</div><div class="section-sub">개입이 필요한 고위험 작업유형 분포를 확인합니다</div>', unsafe_allow_html=True)
