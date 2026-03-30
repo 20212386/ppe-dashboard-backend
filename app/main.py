@@ -267,83 +267,22 @@ def analysis_detail(
 
 @app.get("/report/tbm")
 def report_tbm(target_date: str | None = None):
-    df = load_logs(DATA_FILE_PATH)
+    df = load_input_logs()
 
-    # 사용자가 날짜를 고르면 그 날짜 기준,
-    # 안 고르면 오늘 기준으로 동작
-    selected_date = target_date if target_date else get_today_date_str()
-
+    selected_date = target_date if target_date else get_yesterday_date_str()
     day_df = filter_by_date(df, selected_date)
 
-    compliance_rate = calculate_compliance_rate(day_df)
-    weakest_zone = get_weakest_zone(day_df)
-    most_missing_ppe = get_most_missing_ppe(day_df)
-
-    hourly_violations = get_hourly_violations(day_df)
-    top_time = "-"
-    if hourly_violations:
-        top_time = max(hourly_violations, key=lambda x: x["count"])["time_slot"]
-
-    total_rows = len(day_df)
-    risk_rows = int((day_df["risk_exposure"] == "O").sum()) if "risk_exposure" in day_df.columns else 0
-    not_worn_rows = int((day_df["worn"] == "X").sum()) if "worn" in day_df.columns else 0
-    normal_rows = total_rows - not_worn_rows
-
-    top_zone = weakest_zone["zone"] if weakest_zone and weakest_zone.get("zone") else "-"
-    top_ppe = most_missing_ppe["missed_ppe"] if most_missing_ppe and most_missing_ppe.get("missed_ppe") else "-"
-
-    if total_rows == 0:
-        briefing_text = f"{selected_date} 기준 데이터가 없어 기본 안전수칙 중심으로 TBM을 진행하면 됩니다."
-        checklist = [
-            "기본 PPE 착용 상태 확인",
-            "고소작업 전 랜야드 점검",
-            "절단작업 전 장갑 착용 확인",
-        ]
-        focus_message = "입력 데이터가 없으므로 기본 안전수칙 재확인과 현장 순찰에 집중하세요."
-    else:
-        briefing_text = (
-            f"{selected_date} 총 {total_rows}건의 작업 데이터가 기록되었고, "
-            f"PPE 준수율은 {compliance_rate}%입니다. "
-            f"가장 취약한 구역은 {top_zone}이며, "
-            f"가장 많이 누락된 PPE는 {top_ppe}입니다. "
-            f"특히 {top_time} 시간대 위반이 집중되어 해당 시간대 집중 점검이 필요합니다."
-        )
-
-        checklist = []
-        if top_zone != "-":
-            checklist.append(f"{top_zone} 작업 전 현장 순찰 및 집중 점검")
-        if top_ppe != "-":
-            checklist.append(f"{top_ppe} 착용 여부 작업 시작 전 재확인")
-        if top_time != "-":
-            checklist.append(f"{top_time} 시간대 집중 순찰 실시")
-        checklist.append("작업 시작 전 작업자 대상 PPE 재안내")
-
-        focus_message = (
-            f"오늘은 {top_zone}에서 {top_ppe} 착용 여부를 우선 관리하고, "
-            f"{top_time} 시간대 현장 점검을 강화하세요."
-        )
-
-    full_script = (
-        f"[브리핑 기준일] {selected_date}\n\n"
-        f"[핵심 브리핑]\n{briefing_text}\n\n"
-        f"[오늘의 중점 관리사항]\n{focus_message}\n\n"
-        f"[현장 체크리스트]\n- " + "\n- ".join(checklist)
-    )
+    kpis = get_tbm_kpis(day_df)
+    stats = get_tbm_stats(day_df)
+    checklist = get_tbm_checklist(day_df)
+    briefing_text = get_tbm_briefing_text(day_df, selected_date)
+    focus_message = get_tbm_focus_message(day_df)
+    full_script = get_tbm_full_script(day_df, selected_date)
 
     return {
         "date": selected_date,
-        "kpis": {
-            "compliance_rate": compliance_rate,
-            "top_zone": top_zone,
-            "top_ppe": top_ppe,
-            "top_time": top_time,
-        },
-        "stats": {
-            "total_rows": total_rows,
-            "risk_rows": risk_rows,
-            "not_worn_rows": not_worn_rows,
-            "normal_rows": normal_rows,
-        },
+        "kpis": kpis,
+        "stats": stats,
         "briefing_text": briefing_text,
         "checklist": checklist,
         "focus_message": focus_message,

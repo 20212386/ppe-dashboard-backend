@@ -79,8 +79,11 @@ st.markdown("""
     border: 1px solid #e2e8f0;
     border-radius: 20px;
     padding: 20px 22px;
-    min-height: 145px;
+    min-height: 170px;
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .metric-top {
@@ -88,6 +91,7 @@ st.markdown("""
     justify-content: space-between;
     align-items: flex-start;
     gap: 14px;
+    height: 100%;
 }
 
 .metric-label {
@@ -95,6 +99,7 @@ st.markdown("""
     font-size: 0.92rem;
     margin-bottom: 10px;
     font-weight: 600;
+    min-height: 24px;
 }
 
 .metric-value-lg {
@@ -104,6 +109,9 @@ st.markdown("""
     line-height: 1.1;
     margin-bottom: 10px;
     letter-spacing: -0.03em;
+    min-height: 72px;
+    display: flex;
+    align-items: center;
 }
 
 .metric-value-md {
@@ -113,25 +121,10 @@ st.markdown("""
     line-height: 1.2;
     margin-bottom: 10px;
     letter-spacing: -0.02em;
-}
-
-.metric-badge {
-    display: inline-block;
-    padding: 6px 11px;
-    border-radius: 999px;
-    font-size: 0.76rem;
-    font-weight: 700;
-}
-
-.metric-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
+    min-height: 72px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    flex-shrink: 0;
+    word-break: keep-all;
 }
 
 .script-box {
