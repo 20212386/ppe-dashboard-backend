@@ -9,7 +9,6 @@ st.set_page_config(
 
 DATA_PATH = Path("app/data/input_logs.csv")
 
-
 # =========================
 # 유틸
 # =========================
@@ -25,12 +24,10 @@ EXPECTED_COLUMNS = [
     "note",
 ]
 
-
 def ensure_data_file():
     DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not DATA_PATH.exists():
         pd.DataFrame(columns=EXPECTED_COLUMNS).to_csv(DATA_PATH, index=False, encoding="utf-8-sig")
-
 
 def load_data() -> pd.DataFrame:
     ensure_data_file()
@@ -46,10 +43,8 @@ def load_data() -> pd.DataFrame:
     df = df[EXPECTED_COLUMNS].copy()
     return df
 
-
 def save_data(df: pd.DataFrame):
     df.to_csv(DATA_PATH, index=False, encoding="utf-8-sig")
-
 
 def normalize_uploaded_df(df: pd.DataFrame) -> pd.DataFrame:
     work = df.copy()
@@ -109,7 +104,6 @@ def normalize_uploaded_df(df: pd.DataFrame) -> pd.DataFrame:
 
     return work[EXPECTED_COLUMNS].copy()
 
-
 def make_manual_row(date_value, time_slot, site, zone, task_type, missed_ppe, team, note):
     missed_ppe = str(missed_ppe).strip()
     is_violated = 0 if missed_ppe == "" or missed_ppe == "정상 착용" else 1
@@ -128,7 +122,6 @@ def make_manual_row(date_value, time_slot, site, zone, task_type, missed_ppe, te
         "team": team,
         "note": note,
     }])
-
 
 def summary_metrics(df: pd.DataFrame):
     total_count = len(df)
@@ -316,7 +309,11 @@ with left:
     with c7:
         manual_missed_ppe = st.selectbox("누락 PPE", ["정상 착용", "장갑", "안전모", "랜야드"])
     with c8:
-        manual_note = st.text_input("비고", placeholder="추가 메모 입력")
+        # 💡 [핵심] 여기에 아이디 껍데기를 추가했습니다! 기능은 없고 간지만 납니다.
+        dummy_worker_id = st.text_input("작업자 ID", placeholder="예 : W-1234")
+
+    # 💡 [핵심] 비고 칸을 밖으로 빼서 전체 가로 너비를 꽉 채우게 만들었습니다!
+    manual_note = st.text_input("비고", placeholder="추가 메모 입력")
 
     if st.button("수기 입력 저장", use_container_width=True):
         new_row = make_manual_row(
