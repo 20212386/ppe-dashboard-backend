@@ -3,20 +3,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import sys
-import os
 
-# 💡 [최종 필살기] Streamlit Cloud에서 경로 절대 못 잃어버리게 만들기!
-# 1. 현재 파일(3_위험패턴_분석.py) 기준 부모 폴더(루트) 찾기
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.dirname(current_dir)
-
-# 2. 클라우드 실행 디렉토리와 루트 폴더를 둘 다 강제 주입 (최우선순위 0번)
-for path in [root_dir, os.getcwd()]:
-    if path not in sys.path:
-        sys.path.insert(0, path)
-
-import logic # 이제 1000% 찾습니다!
+# 💡 다른 페이지들처럼 아주 심플하고 순수하게 import! 
+# (에러 일으키던 경로 강제 주입 코드 싹 지웠습니다)
+import logic
 
 # --- 공통 UI 스타일링 ---
 def apply_toss_style(fig):
@@ -56,7 +46,7 @@ with st.expander("필터 설정", expanded=True):
         ppe_list = ["전체"] + list(df['missed_ppe'].dropna().unique()) if not df.empty and 'missed_ppe' in df.columns else ["전체"]
         ppe_filter = st.selectbox("PPE 종류", ppe_list)
     with col5:
-        # 위험 여부 필터 (여기에 따라 그래프가 변신합니다!)
+        # 💡 위험 여부 필터 (여기에 따라 그래프가 변신!)
         risk_filter = st.selectbox("위험 여부", ["전체", "위험(미착용)", "정상(착용)"])
 
 # 3. 데이터 필터링 (위험 여부 포함)
@@ -73,7 +63,7 @@ filtered_df = logic.filter_input_data(
     end_date=end_date.strftime("%Y-%m-%d"), 
     zone=None if zone_filter == "전체" else zone_filter,
     ppe_type=None if ppe_filter == "전체" else ppe_filter,
-    risk_exposure=risk_val # 여기서 logic.py로 값을 넘겨 필터링
+    risk_exposure=risk_val
 )
 
 charts_data = logic.get_analysis_charts(filtered_df)
