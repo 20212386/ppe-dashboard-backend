@@ -186,7 +186,12 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
     tk_cats = ["고소작업", "절단작업", "자재운반", "설비점검"]
 
     if df.empty:
-        return {"time_chart": [{"label": c, "count": 0} for c in t_cats], "ppe_chart": [{"label": c, "count": 0} for c in p_cats], "zone_chart": [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats], "task_chart": [{"label": c, "count": 0} for c in tk_cats]}
+        return {
+            "time_chart": [{"label": c, "count": 0} for c in t_cats], 
+            "ppe_chart": [{"label": c, "count": 0} for c in p_cats], 
+            "zone_chart": [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats], 
+            "task_chart": [{"label": c, "count": 0} for c in tk_cats]
+        }
 
     t_counts = df["time_slot"].replace("", pd.NA).dropna().value_counts() if "time_slot" in df.columns else {}
     time_chart = [{"label": c, "count": int(t_counts.get(c, 0))} for c in t_cats]
@@ -205,12 +210,27 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
             group = temp_z[temp_z["zone"] == z]
             total = len(group)
             viol = int((group["is_violated"] == 1).sum())
-            r_rate = round((viol / total) * 100, 1) if total > 0 else 0.0
-            zone_chart.append({"label": z, "count": viol, "compliance_rate": round(100.0 - r_rate, 1) if total > 0 else 0.0, "risk_rate": r_rate})
+            
+            # 💡 [핵심 수술] 1페이지와 똑같이 최소 분모 10명 보정 적용!
+            smoothed_total = max(total, 10)
+            
+            # total이 0일 때(데이터가 아예 없을 때)는 100%가 아니라 깔끔하게 0.0%로 처리!
+            if total > 0:
+                r_rate = round((viol / smoothed_total) * 100, 1)
+                c_rate = round(100.0 - r_rate, 1)
+            else:
+                r_rate = 0.0
+                c_rate = 0.0
+                
+            zone_chart.append({
+                "label": z, 
+                "count": viol, 
+                "compliance_rate": c_rate, 
+                "risk_rate": r_rate
+            })
     else:
         zone_chart = [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats]
 
-    return {"time_chart": time_chart, "ppe_chart": ppe_chart, "zone_chart": zone_chart, "task_chart": task_chart}
 
 def get_recommend_action(df: pd.DataFrame) -> str:
     if df.empty: return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 점검을 유지하세요."
