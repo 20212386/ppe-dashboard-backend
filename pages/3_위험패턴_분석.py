@@ -8,7 +8,7 @@ st.set_page_config(page_title="위험패턴 분석", page_icon="📊", layout="w
 API_BASE = "https://ppe-dashboard-backend.onrender.com"
 
 # =========================
-# 1. 스타일 (토스/애플 감성 완벽 이식)
+# 1. 스타일
 # =========================
 st.markdown("""
 <style>
@@ -16,7 +16,7 @@ st.markdown("""
 .main-title { font-size: 2.15rem; font-weight: 800; color: #0f172a; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
 .sub-title { font-size: 0.98rem; color: #64748b; margin-bottom: 1.1rem; }
 .filter-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
-.section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
+.section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; height: 100%; }
 .section-title { font-size: 1.16rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem; }
 .section-sub { color: #64748b; font-size: 0.88rem; margin-bottom: 1.2rem; }
 .metric-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 18px 20px; min-height: 158px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
@@ -58,7 +58,6 @@ def render_empty_chart_message(message: str):
 def fetch_analysis_data(params: dict):
     try:
         clean_params = {k: v for k, v in params.items() if v is not None and v != ""}
-        # 타임아웃 넉넉하게
         res = requests.get(f"{API_BASE}/analysis/detail", params=clean_params, timeout=60)
         res.raise_for_status()
         return res.json()
@@ -130,16 +129,13 @@ else:
     count, kpis, charts, recommend_action = 0, {}, {}, "필터를 설정한 뒤 '분석 실행' 버튼을 눌러주세요."
 
 time_cats = ["오전", "점심직후", "오후"]
-# PPE 고정 카테고리는 이제 카운트 차트에서만 씁니다.
 ppe_cats = ["안전모", "랜야드", "장갑"]
-# 구역과 작업유형 카테고리는 백엔드 기획서대로 고정
 zone_cats = ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]
 task_cats = ["고소작업", "절단작업", "자재운반", "설비점검"]
 
 time_df = _safe_counts_df(charts.get("time_chart", []), time_cats)
 ppe_df = _safe_counts_df(charts.get("ppe_chart", []), ppe_cats)
 zone_df = _safe_counts_df(charts.get("zone_chart", []), zone_cats)
-# 💡 작업유형별 데이터 가져오기!
 task_df = _safe_counts_df(charts.get("task_chart", []), task_cats)
 
 top_time, top_zone, top_task, top_ppe = kpis.get("top_time") or "-", kpis.get("top_zone") or "-", kpis.get("top_task_type") or "-", kpis.get("top_ppe") or "-"
@@ -163,12 +159,13 @@ with r1c1:
     st.markdown('<div class="section-card"><div class="section-title">시간대별 위반 건수</div><div class="section-sub">시간대별 반복 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
     else:
-        fig_time = go.Figure(go.Bar(x=time_df["label"].tolist(), y=time_df["count"].tolist(), marker_color=["#60a5fa", "#3b82f6", "#1e3a8a"], width=0.45))
+        fig_time = go.Figure(go.Bar(
+            x=time_df["label"].tolist(), y=time_df["count"].tolist(), 
+            marker=dict(color="rgba(59, 130, 246, 0.75)", line=dict(color="#2563eb", width=1.5)), 
+            width=0.45
+        ))
         y_max = max(4, int(time_df["count"].max()) + (int(time_df["count"].max()) * 0.1))
-        # dtick 자동 조절
         fig_time.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max]))
-        try: fig_time.update_layout(barcornerradius=12)
-        except: pass
         st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False}, key="p3_violation_chart")
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -176,12 +173,13 @@ with r1c2:
     st.markdown('<div class="section-card"><div class="section-title">PPE별 위반 건수</div><div class="section-sub">누락 빈도가 높은 보호구를 확인합니다</div>', unsafe_allow_html=True)
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
     else:
-        fig_ppe = go.Figure(go.Bar(x=ppe_df["label"].tolist(), y=ppe_df["count"].tolist(), marker_color=["#c4b5fd", "#a855f7", "#7e22ce"], width=0.45))
+        fig_ppe = go.Figure(go.Bar(
+            x=ppe_df["label"].tolist(), y=ppe_df["count"].tolist(), 
+            marker=dict(color="rgba(168, 85, 247, 0.75)", line=dict(color="#9333ea", width=1.5)), 
+            width=0.45
+        ))
         y_max = max(4, int(ppe_df["count"].max()) + (int(ppe_df["count"].max()) * 0.1))
-        # dtick 자동 조절
         fig_ppe.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max]))
-        try: fig_ppe.update_layout(barcornerradius=12)
-        except: pass
         st.plotly_chart(fig_ppe, use_container_width=True, config={"displayModeBar": False}, key="p3_ppe_chart")
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -192,48 +190,45 @@ with r2c1:
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
     else:
         fig_zone = go.Figure()
-        fig_zone.add_trace(go.Bar(x=zone_df["label"].tolist(), y=zone_df["compliance_rate"].tolist(), name="준수율 %", marker_color="#22c55e", width=0.35))
-        fig_zone.add_trace(go.Bar(x=zone_df["label"].tolist(), y=zone_df["risk_rate"].tolist(), name="위험도 %", marker_color="#ef4444", width=0.35))
+        fig_zone.add_trace(go.Bar(
+            x=zone_df["label"].tolist(), y=zone_df["compliance_rate"].tolist(), 
+            name="준수율 %", 
+            marker=dict(color="rgba(34, 197, 94, 0.75)", line=dict(color="#16a34a", width=1.5)), 
+            width=0.35
+        ))
+        fig_zone.add_trace(go.Bar(
+            x=zone_df["label"].tolist(), y=zone_df["risk_rate"].tolist(), 
+            name="위험도 %", 
+            marker=dict(color="rgba(239, 68, 68, 0.75)", line=dict(color="#dc2626", width=1.5)), 
+            width=0.35
+        ))
         
         fig_zone.update_layout(
             barmode="group", height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
             showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
-            bargap=0.35, bargroupgap=0.05,
+            bargap=0.45, bargroupgap=0.1,
             yaxis=dict(range=[0, 100], dtick=20, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), ticksuffix="%"),
             xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155"))
         )
-        try: fig_zone.update_layout(barcornerradius=12)
-        except: pass
         st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False}, key="p3_zone_chart")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r2c2:
-    # 💡 [여기가 핵심!!] 주작 차트 대신 들어가는 [작업유형별 위반 분포] 차트!
     st.markdown('<div class="section-card"><div class="section-title">작업유형별 위반 분포</div><div class="section-sub">개입이 필요한 고위험 작업유형 분포를 확인합니다</div>', unsafe_allow_html=True)
     if analysis_data is None: render_empty_chart_message("필터를 설정하고 <b>분석 실행</b>을 누르면 데이터가 표시됩니다.")
     else:
-        # 💡 작업유형은 가로형 막대차트로 세련되게! (Option 1 스타일)
         fig_task = go.Figure(go.Bar(
-            y=task_df["label"].tolist(), 
-            x=task_df["count"].tolist(), 
-            orientation="h", 
-            # 세련된 파란색 그라데이션
-            marker_color=["#93c5fd", "#60a5fa", "#3b82f6", "#1e40af"], 
-            width=0.45,
-            hovertemplate="작업유형: %{y}<br>건수: %{x}건<extra></extra>"
+            y=task_df["label"].tolist(), x=task_df["count"].tolist(), orientation="h", 
+            marker=dict(color="rgba(59, 130, 246, 0.75)", line=dict(color="#2563eb", width=1.5)), 
+            width=0.45, hovertemplate="작업유형: %{y}<br>건수: %{x}건<extra></extra>"
         ))
-        
         x_max = max(4, int(task_df["count"].max()) + (int(task_df["count"].max()) * 0.1))
-        
         fig_task.update_layout(
             height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
-            showlegend=False, bargap=0.35,
+            showlegend=False, bargap=0.45,
             yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#334155")),
-            # dtick 자동 조절
             xaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, x_max])
         )
-        try: fig_task.update_layout(barcornerradius=12)
-        except: pass
         st.plotly_chart(fig_task, use_container_width=True, config={"displayModeBar": False}, key="p3_task_chart")
     st.markdown('</div>', unsafe_allow_html=True)
 

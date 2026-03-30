@@ -32,22 +32,14 @@ def safe_text(value, default="-"):
     if text == "" or text.lower() in ["none", "nan", "null"]: return default
     return text
 
-# 💡 [핵심] 멘트를 진짜 AI처럼 전문가 포스로 싹 바꿨습니다!
 def build_ai_summary(report_date, weakest_zone_name, weakest_zone_score, most_missing_ppe_name, priority_task_text):
     w_name, p_name, t_text = safe_text(weakest_zone_name), safe_text(most_missing_ppe_name), safe_text(priority_task_text)
     items = []
-    
     items.append(f"<b>[AI 종합 진단]</b> {report_date} 기준, 현장 센서 및 비전 데이터를 종합 분석한 결과입니다.")
-    
-    if w_name != "-": 
-        items.append(f"<b>[취약 구역]</b> <b>{w_name}</b>의 위험 노출(위반율 <b>{weakest_zone_score}%</b>)이 가장 높게 측정되었습니다. 해당 구역의 사각지대 및 작업 환경 재점검을 권장합니다.")
-    if p_name != "-": 
-        items.append(f"<b>[행동 패턴]</b> <b>{p_name}</b> 미착용 사례가 알고리즘에 반복 감지되었습니다. 작업자 피로도 혹은 보호구 상태 결함 여부를 확인하시기 바랍니다.")
-    if t_text != "-": 
-        items.append(f"<b>[고위험 작업]</b> <b>{t_text}</b> 투입 인원의 규정 위반이 두드러집니다. 작업 시작 전 TBM(안전조회)을 통한 집중 교육이 시급합니다.")
-    
+    if w_name != "-": items.append(f"<b>[취약 구역]</b> <b>{w_name}</b>의 위험 노출(위반율 <b>{weakest_zone_score}%</b>)이 가장 높게 측정되었습니다. 해당 구역의 사각지대 및 작업 환경 재점검을 권장합니다.")
+    if p_name != "-": items.append(f"<b>[행동 패턴]</b> <b>{p_name}</b> 미착용 사례가 알고리즘에 반복 감지되었습니다. 작업자 피로도 혹은 보호구 상태 결함 여부를 확인하시기 바랍니다.")
+    if t_text != "-": items.append(f"<b>[고위험 작업]</b> <b>{t_text}</b> 투입 인원의 규정 위반이 두드러집니다. 작업 시작 전 TBM(안전조회)을 통한 집중 교육이 시급합니다.")
     items.append("<b>[예측 조치]</b> AI 분석 결과, 취약 시간대 순찰 빈도를 상향하고 반복 누락자 대상 맞춤형 교육을 진행할 경우 위험도를 유의미하게 낮출 수 있습니다.")
-    
     return items
 
 def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, icon_bg, icon_fg, icon_symbol):
@@ -167,11 +159,22 @@ row1_col1, row1_col2 = st.columns([1.7, 1.3])
 with row1_col1:
     st.markdown('<div class="section-card"><div class="section-title">시간대별 PPE 이탈 건수</div><div class="section-sub">시간대별 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
     fig_time = go.Figure()
-    fig_time.add_trace(go.Bar(x=hourly_df["time_slot"].tolist(), y=hourly_df["count"].tolist(), orientation="v", marker=dict(color=["#60a5fa", "#3b82f6", "#1e3a8a"]), width=0.45, hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>"))
+    
+    # 💡 페이지 5 스타일 적용: 반투명 컬러 + 진한 테두리, 각진 모서리!
+    fig_time.add_trace(go.Bar(
+        x=hourly_df["time_slot"].tolist(), 
+        y=hourly_df["count"].tolist(), 
+        orientation="v", 
+        marker=dict(
+            color="rgba(59, 130, 246, 0.75)", 
+            line=dict(color="#2563eb", width=1.5)
+        ), 
+        width=0.45, 
+        hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>"
+    ))
+    
     y_max = max(4, int(hourly_df["count"].max()) + (int(hourly_df["count"].max()) * 0.1))
     fig_time.update_layout(height=340, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", showlegend=False, xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max]))
-    try: fig_time.update_layout(barcornerradius=12)
-    except Exception: pass
     st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -188,25 +191,37 @@ with row2_col1:
     st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
     fig_zone = go.Figure()
     
-    fig_zone.add_trace(go.Bar(x=zone_data["zone"].tolist(), y=zone_data["compliance"].tolist(), name="준수율 %", marker=dict(color="#22c55e"), width=0.35, hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"))
-    fig_zone.add_trace(go.Bar(x=zone_data["zone"].tolist(), y=zone_data["risk"].tolist(), name="위험도 %", marker=dict(color="#ef4444"), width=0.35, hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"))
+    # 💡 페이지 5 스타일: 초록색 반투명 테두리
+    fig_zone.add_trace(go.Bar(
+        x=zone_data["zone"].tolist(), 
+        y=zone_data["compliance"].tolist(), 
+        name="준수율 %", 
+        marker=dict(color="rgba(34, 197, 94, 0.75)", line=dict(color="#16a34a", width=1.5)), 
+        width=0.35, 
+        hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
+    ))
+    # 💡 페이지 5 스타일: 빨간색 반투명 테두리
+    fig_zone.add_trace(go.Bar(
+        x=zone_data["zone"].tolist(), 
+        y=zone_data["risk"].tolist(), 
+        name="위험도 %", 
+        marker=dict(color="rgba(239, 68, 68, 0.75)", line=dict(color="#dc2626", width=1.5)), 
+        width=0.35, 
+        hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
+    ))
 
     fig_zone.update_layout(
         barmode="group", height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
         showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
-        bargap=0.35, bargroupgap=0.05,
+        bargap=0.45, bargroupgap=0.1, # 💡 막대 뚱뚱이 방지
         yaxis=dict(range=[0, 100], dtick=25, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), ticksuffix="%"),
         xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155"))
     )
-    
-    try: fig_zone.update_layout(barcornerradius=12)
-    except Exception: pass
     
     st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
     st.markdown('</div>', unsafe_allow_html=True)
 
 with row2_col2:
-    # 💡 [핵심] 불필요한 고정 높이 485px 삭제! 내용만큼 예쁘게 렌더링!
     ai_html = f"""
     <div class="section-card">
         <div class="ai-title-row">
