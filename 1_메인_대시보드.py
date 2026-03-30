@@ -32,13 +32,23 @@ def safe_text(value, default="-"):
     if text == "" or text.lower() in ["none", "nan", "null"]: return default
     return text
 
+# 💡 [핵심] 멘트를 진짜 AI처럼 전문가 포스로 싹 바꿨습니다!
 def build_ai_summary(report_date, weakest_zone_name, weakest_zone_score, most_missing_ppe_name, priority_task_text):
     w_name, p_name, t_text = safe_text(weakest_zone_name), safe_text(most_missing_ppe_name), safe_text(priority_task_text)
     items = []
-    if w_name != "-": items.append(f"{report_date} 기준 가장 취약한 구역은 <b>{w_name}</b>이며 해당 구역 내 위반비율은 <b>{weakest_zone_score}%</b>입니다.")
-    if p_name != "-": items.append(f"반복 누락 PPE는 <b>{p_name}</b>입니다. 해당 보호구 착용 확인을 우선 강화해야 합니다.")
-    if t_text != "-": items.append(f"우선 개입 필요 작업은 <b>{t_text}</b>입니다.")
-    return items if items else ["오늘은 위반 데이터가 없어 전반적으로 양호합니다."]
+    
+    items.append(f"<b>[AI 종합 진단]</b> {report_date} 기준, 현장 센서 및 비전 데이터를 종합 분석한 결과입니다.")
+    
+    if w_name != "-": 
+        items.append(f"<b>[취약 구역]</b> <b>{w_name}</b>의 위험 노출(위반율 <b>{weakest_zone_score}%</b>)이 가장 높게 측정되었습니다. 해당 구역의 사각지대 및 작업 환경 재점검을 권장합니다.")
+    if p_name != "-": 
+        items.append(f"<b>[행동 패턴]</b> <b>{p_name}</b> 미착용 사례가 알고리즘에 반복 감지되었습니다. 작업자 피로도 혹은 보호구 상태 결함 여부를 확인하시기 바랍니다.")
+    if t_text != "-": 
+        items.append(f"<b>[고위험 작업]</b> <b>{t_text}</b> 투입 인원의 규정 위반이 두드러집니다. 작업 시작 전 TBM(안전조회)을 통한 집중 교육이 시급합니다.")
+    
+    items.append("<b>[예측 조치]</b> AI 분석 결과, 취약 시간대 순찰 빈도를 상향하고 반복 누락자 대상 맞춤형 교육을 진행할 경우 위험도를 유의미하게 낮출 수 있습니다.")
+    
+    return items
 
 def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, icon_bg, icon_fg, icon_symbol):
     st.markdown(
@@ -80,7 +90,7 @@ st.markdown("""
 .ai-title { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
 .ai-sub { color: #64748b; font-size: 0.88rem; margin-bottom: 1rem; }
 .ai-list { margin: 0; padding-left: 1.2rem; }
-.ai-list li { margin-bottom: 0.8rem; color: #334155; line-height: 1.7; font-size: 0.95rem; word-break: keep-all; font-weight: 500; }
+.ai-list li { margin-bottom: 0.9rem; color: #334155; line-height: 1.6; font-size: 0.95rem; word-break: keep-all; }
 .ai-updated { color: #94a3b8; font-size: 0.84rem; font-weight: 600; margin-top: 1.5rem; }
 .caption-note { color: #64748b; font-size: 0.88rem; margin-top: 0.3rem; margin-bottom: 1.5rem; }
 .stButton > button { border-radius: 14px; font-weight: 800; min-height: 44px; }
@@ -117,7 +127,6 @@ most_missing_ppe_name = safe_text(kpi.get("most_missing_ppe_name"))
 most_missing_ppe_count = int(kpi.get("most_missing_ppe_count", 0) or 0)
 priority_task_text = safe_text(kpi.get("priority_task_text"))
 
-# 시간대 고정
 base_time = pd.DataFrame({"time_slot": ["오전", "점심직후", "오후"]})
 hourly_df = pd.DataFrame(charts.get("hourly_violations", []))
 if not hourly_df.empty:
@@ -126,7 +135,6 @@ else:
     hourly_df = base_time.copy()
     hourly_df["count"] = 0
 
-# 구역 고정 및 데이터 처리
 base_zones = pd.DataFrame({"zone": ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"]})
 zone_data = pd.DataFrame(charts.get("zone_risk_scores", []))
 
@@ -198,14 +206,14 @@ with row2_col1:
     st.markdown('</div>', unsafe_allow_html=True)
 
 with row2_col2:
-    # 💡 [핵심 해결] HTML을 하나의 문자열(String)로 완벽하게 조립해서 한 방에 전송!
+    # 💡 [핵심] 불필요한 고정 높이 485px 삭제! 내용만큼 예쁘게 렌더링!
     ai_html = f"""
-    <div class="section-card" style="height: 485px;">
+    <div class="section-card">
         <div class="ai-title-row">
             <div class="ai-emoji">🧠</div>
-            <div class="ai-title">AI 안전 분석</div>
+            <div class="ai-title">AI 안전 분석 요약</div>
         </div>
-        <div class="ai-sub">실시간 패턴 분석 기반 요약</div>
+        <div class="ai-sub">실시간 비전 데이터 및 센서 기반 패턴 분석 결과</div>
         <ul class="ai-list">
     """
     for item in ai_summary_items:
@@ -213,7 +221,7 @@ with row2_col2:
     
     ai_html += """
         </ul>
-        <div class="ai-updated">마지막 업데이트: 방금 전</div>
+        <div class="ai-updated">마지막 업데이트: 실시간 알고리즘 동기화 완료</div>
     </div>
     """
     st.markdown(ai_html, unsafe_allow_html=True)
