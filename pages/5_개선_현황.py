@@ -64,6 +64,30 @@ st.markdown("""
     color: #64748b;
     font-size: 0.86rem;
     margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.section-card-head-fixed {
+    min-height: 210px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.section-title-fixed {
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8rem;
+}
+
+.section-sub-fixed {
+    min-height: 72px;
+    display: flex;
+    align-items: flex-start;
+    line-height: 1.6;
+    color: #64748b;
+    font-size: 0.86rem;
 }
 
 .principle-card {
@@ -419,14 +443,20 @@ st.markdown('</div>', unsafe_allow_html=True)
 col_left, col_right = st.columns([1.25, 1])
 
 with col_left:
-    st.markdown('<div class="section-card"><div class="section-title">추천 보상 방안</div><div class="section-sub">개선율과 참여도를 근거로 비징계형 인센티브를 설계합니다</div><div class="recommend-grid">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-card section-card-head-fixed">'
+        '<div class="section-title section-title-fixed">추천 보상 방안</div>'
+        '<div class="section-sub-fixed">개선율과 참여도를 근거로 비징계형 인센티브를 설계합니다</div>'
+        '<div class="recommend-grid">',
+        unsafe_allow_html=True
+    )
 
     st.markdown("""
     <div class="recommend-card" style="background:#f0fdf4; border-color:#86efac; color:#166534;">
         <div class="recommend-title">1) 신체 보호구·작업보조용품 지원</div>
         <div class="recommend-desc">
             주간 PPE 누락 감소가 확인된 팀을 대상으로 아치 서포트 깔창, 관절 보호대, 프리미엄 장갑 등
-            작업 피로 저감형 용품을 지급합니다. 이는 근골격계 부담과 휴먼 에러를 줄이는 직접적 지원책입니다.
+            작업 피로 저감형 용품을 지급합니다. 이는 근골격계 부담과 작업 피로를 줄이는 직접적 지원책입니다.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -464,7 +494,13 @@ with col_left:
     st.markdown('</div></div>', unsafe_allow_html=True)
 
 with col_right:
-    st.markdown('<div class="section-card"><div class="section-title">제도 설계 원칙</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-card section-card-head-fixed">'
+        '<div class="section-title section-title-fixed">제도 설계 원칙</div>'
+        '<div class="section-sub-fixed">AI 기반 개선 지표를 활용해 팀 중심의 비징계형 안전 인센티브를 운영합니다</div>',
+        unsafe_allow_html=True
+    )
+
     st.markdown("""
     <div class="notice-box">
     • 본 플랫폼의 인센티브는 <b>단순 현금 보상</b>보다 <b>행동기반안전(BBS)</b>과 <b>비징계형 개선 유도</b>에 초점을 둡니다.<br><br>
@@ -473,4 +509,5 @@ with col_right:
     • 인센티브는 보호구 지원, 휴게환경 개선, 회복 지원처럼 현장 체감도가 높은 항목으로 구성해 자발적 참여를 높이도록 설계합니다.
     </div>
     """, unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
