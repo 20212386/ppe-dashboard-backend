@@ -53,7 +53,7 @@ def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, ico
     )
 
 # =========================
-# 스타일 
+# 스타일 (Toss/Apple 감성 100% 이식)
 # =========================
 st.markdown("""
 <style>
@@ -126,39 +126,37 @@ ai_summary_items = build_ai_summary(str(target_date), weakest_zone_name, weakest
 # KPI 카드
 # =========================
 c1, c2, c3, c4 = st.columns(4)
-with c1: render_metric_card("위험노출 대비 PPE 준수율", kpi.get("compliance_rate_text", f"{round(compliance_rate, 2)}%"), "실시간 집계", "#3b82f6", "#eff6ff", "#1d4ed8", "#eff6ff", "#3b82f6", "🛡️")
-with c2: render_metric_card("오늘 가장 취약한 구역", weakest_zone_name, f"위험도 {weakest_zone_score}%", "#ef4444", "#fef2f2", "#b91c1c", "#fef2f2", "#ef4444", "⚠️")
-with c3: render_metric_card("반복 누락 PPE", most_missing_ppe_name, f"{most_missing_ppe_count}회 반복", "#f97316", "#fff7ed", "#c2410c", "#fff7ed", "#f97316", "🦺")
-with c4: render_metric_card("우선 개입 필요 작업", priority_task_text, "우선 확인", "#a855f7", "#faf5ff", "#7e22ce", "#faf5ff", "#9333ea", "⏱️")
+# 💡 [컬러 매칭 1] 쨍한 파란색 (#3b82f6)
+with c1: render_metric_card("위험노출 대비 PPE 준수율", kpi.get("compliance_rate_text", f"{round(compliance_rate, 2)}%"), "실시간 집계", "#3b82f6", "#eff6ff", "#2563eb", "#e0e7ff", "#3b82f6", "🛡️")
+# 💡 [컬러 매칭 2] 쨍한 빨간색 (#ef4444)
+with c2: render_metric_card("오늘 가장 취약한 구역", weakest_zone_name, f"위험도 {weakest_zone_score}%", "#ef4444", "#fef2f2", "#b91c1c", "#fee2e2", "#ef4444", "⚠️")
+# 💡 [컬러 매칭 3] 쨍한 주황색 (#f97316)
+with c3: render_metric_card("반복 누락 PPE", most_missing_ppe_name, f"{most_missing_ppe_count}회 반복", "#f97316", "#fff7ed", "#c2410c", "#ffedd5", "#f97316", "🦺")
+# 💡 [컬러 매칭 4] TBM 보라색 (#a855f7)
+with c4: render_metric_card("우선 개입 필요 작업", priority_task_text, "우선 확인", "#a855f7", "#faf5ff", "#7e22ce", "#f3e8ff", "#9333ea", "⏱️")
 st.markdown(f'<div class="caption-note">기준일: {target_date} · 현장: {site}</div>', unsafe_allow_html=True)
 
 # =========================
-# 1행 (시간대별 이탈 건수) - 5페이지 감성!
+# 1행 (시간대별 이탈 건수)
 # =========================
 row1_col1, row1_col2 = st.columns([1.7, 1.3])
 with row1_col1:
     st.markdown('<div class="section-card"><div class="section-title">시간대별 PPE 이탈 건수</div><div class="section-sub">시간대별 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
     fig_time = go.Figure()
     
-    # 💡 5페이지 스타일: 각진 모서리, 반투명 컬러, 외곽선, 텍스트 표시
+    # 💡 [수술 핵심] 쨍한 컬러로 변경!! (rgba 지우고 윗쪽 파랑 매칭!)
     fig_time.add_trace(go.Bar(
         x=hourly_df["time_slot"].tolist(), 
         y=hourly_df["count"].tolist(), 
-        text=hourly_df["count"].tolist(), # 막대 위에 숫자 띄우기
+        text=hourly_df["count"].tolist(), 
         textposition="outside",
-        marker=dict(color="rgba(59, 130, 246, 0.65)", line=dict(color="#2563eb", width=1.5)), 
+        # 💡 위쪽 KPI 카드의 파랑(#3b82f6)으로 깔맞춤! 직각 유지! 외곽선은 연하게!
+        marker=dict(color="#3b82f6", line=dict(color="#2563eb", width=1.0)), 
         width=0.4
     ))
     
-    # 글자가 잘리지 않게 Y축 상단을 30% 더 높게 여유줌
     y_max = max(4, int(hourly_df["count"].max()) * 1.3)
-    
-    fig_time.update_layout(
-        height=340, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", 
-        showlegend=False, xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), 
-        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max])
-    )
-    # 💡 둥근 모서리 코드 영원히 삭제!!
+    fig_time.update_layout(height=340, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", showlegend=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(color="#94a3b8"), range=[0, y_max]))
     st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -169,14 +167,15 @@ with row1_col2:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# 2행 (작업구역별 위험노출 준수율) - 5페이지 감성!
+# 2행 (작업구역별 위험노출 준수율)
 # =========================
 row2_col1, row2_col2 = st.columns([1.7, 1.3])
 with row2_col1:
     st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
     fig_zone = go.Figure()
     
-    # 💡 5페이지 스타일: 초록색 반투명 + 외곽선 + 텍스트 표시
+    # 💡 [수술 핵심] 쨍한 컬러로 변경!! (rgba 지우고 진한 컬러 매칭!)
+    # 준수율 -> 진한 초록색 (#22c55e)
     fig_zone.add_trace(go.Bar(
         x=zone_data["zone"].tolist(), 
         y=zone_data["compliance"].tolist(), 
@@ -184,10 +183,10 @@ with row2_col1:
         text=zone_data["compliance"].round(1).tolist(),
         texttemplate="%{text}%",
         textposition="outside",
-        marker=dict(color="rgba(34, 197, 94, 0.65)", line=dict(color="#16a34a", width=1.5)), 
+        marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)), 
         width=0.35
     ))
-    # 💡 5페이지 스타일: 빨간색 반투명 + 외곽선 + 텍스트 표시
+    # 위험도 -> 쨍한 빨간색 (#ef4444, 윗쪽 위험구역 카드 매칭!)
     fig_zone.add_trace(go.Bar(
         x=zone_data["zone"].tolist(), 
         y=zone_data["risk"].tolist(), 
@@ -195,19 +194,17 @@ with row2_col1:
         text=zone_data["risk"].round(1).tolist(),
         texttemplate="%{text}%",
         textposition="outside",
-        marker=dict(color="rgba(239, 68, 68, 0.65)", line=dict(color="#dc2626", width=1.5)), 
+        marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)), 
         width=0.35
     ))
 
     fig_zone.update_layout(
         barmode="group", height=360, margin=dict(l=10, r=10, t=20, b=10), plot_bgcolor="white", paper_bgcolor="white", 
         showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
-        bargap=0.4, bargroupgap=0.05, # 막대끼리 겹치지 않게 간격 세밀 조정
-        # 글자 안 잘리게 Y축을 115%까지 늘림
-        yaxis=dict(range=[0, 115], showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), ticksuffix="%"),
-        xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155"))
+        bargap=0.4, bargroupgap=0.05, 
+        yaxis=dict(range=[0, 115], showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(color="#94a3b8"), ticksuffix="%"),
+        xaxis=dict(showgrid=False)
     )
-    # 💡 둥근 모서리 코드 영원히 삭제!!
     st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
     st.markdown('</div>', unsafe_allow_html=True)
 
