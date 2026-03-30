@@ -38,24 +38,49 @@ st.markdown("""
     max-width: 1480px;
 }
 
-/* 메트릭 카드들을 한 줄로 균등 배치 */
-.metric-container {
-    display: flex;
-    gap: 14px;                    /* 카드 사이 간격 */
-    flex-wrap: nowrap;            /* 한 줄로 고정 */
-    margin-top: 20px;
+.main-title {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.2rem;
+    letter-spacing: -0.02em;
+}
+
+.sub-title {
+    color: #64748b;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.section-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    padding: 22px 22px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    margin-bottom: 1rem;
+}
+
+.section-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.8rem;
+}
+
+.section-sub {
+    color: #64748b;
+    font-size: 0.86rem;
+    margin-bottom: 1rem;
 }
 
 .metric-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 20px;
-    padding: 20px 20px;
+    padding: 20px 22px;
+    min-height: 145px;
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-    flex: 1;                      /* 4개가 동일한 너비로 나누어 가짐 */
-    min-height: 162px;            /* 모든 카드 높이 동일하게 */
-    display: flex;
-    flex-direction: column;
 }
 
 .metric-top {
@@ -63,29 +88,30 @@ st.markdown("""
     justify-content: space-between;
     align-items: flex-start;
     gap: 14px;
-    margin-bottom: auto;          /* 배지 아래로 밀어줌 */
 }
 
 .metric-label {
     color: #64748b;
     font-size: 0.92rem;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     font-weight: 600;
 }
 
 .metric-value-lg {
     color: #0f172a;
-    font-size: 2.05rem;
+    font-size: 2rem;
     font-weight: 800;
-    line-height: 1.05;
+    line-height: 1.1;
+    margin-bottom: 10px;
     letter-spacing: -0.03em;
 }
 
 .metric-value-md {
     color: #0f172a;
-    font-size: 1.55rem;
+    font-size: 1.5rem;
     font-weight: 800;
     line-height: 1.2;
+    margin-bottom: 10px;
     letter-spacing: -0.02em;
 }
 
@@ -95,8 +121,6 @@ st.markdown("""
     border-radius: 999px;
     font-size: 0.76rem;
     font-weight: 700;
-    margin-top: 12px;
-    align-self: flex-start;
 }
 
 .metric-icon {
@@ -106,15 +130,66 @@ st.markdown("""
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     flex-shrink: 0;
 }
 
-/* 기존 다른 스타일들은 그대로 유지 */
-.sub-title {
-    color: #64748b;
+.script-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 18px;
+    padding: 18px;
+    color: #334155;
     font-size: 1rem;
-    margin-bottom: 1rem;
+    line-height: 1.8;
+    white-space: pre-wrap;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.95rem;
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-name {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.stat-value {
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 1.5rem;
+}
+
+.check-item {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    color: #92400e;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    font-weight: 700;
+}
+
+.focus-box {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 18px;
+    padding: 18px;
+    color: #1e3a8a;
+    font-size: 1rem;
+    line-height: 1.7;
+    font-weight: 700;
 }
 
 .stButton > button {
