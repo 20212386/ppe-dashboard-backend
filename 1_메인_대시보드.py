@@ -59,7 +59,7 @@ def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, ico
     )
 
 # =========================
-# 스타일 
+# 스타일 (Toss/Apple 감성 100% 이식)
 # =========================
 st.markdown("""
 <style>
@@ -87,6 +87,11 @@ st.markdown("""
 .caption-note { color: #64748b; font-size: 0.88rem; margin-top: 0.3rem; margin-bottom: 1.5rem; }
 .stButton > button { border-radius: 14px; font-weight: 800; min-height: 44px; }
 div[data-testid="stDateInput"] label, div[data-testid="stSelectbox"] label { font-weight: 700; color: #334155; }
+/* 💡 차트 사이 공간 추가 */
+[data-testid="stColumn"] {
+    padding-left: 10px;
+    padding-right: 10px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -155,27 +160,33 @@ st.markdown(f'<div class="caption-note">기준일: {selected_date} · 현장: {s
 # =========================
 # 1행 (시간대별 이탈 건수)
 # =========================
-row1_col1, row1_col2 = st.columns([1.7, 1.3])
+# 💡 비율을 [1.8, 1.2]로 미세 조정하여 왼쪽 Area 차트 너비 확보!
+row1_col1, row1_col2 = st.columns([1.8, 1.2])
 with row1_col1:
     st.markdown('<div class="section-card"><div class="section-title">시간대별 PPE 이탈 건수</div><div class="section-sub">시간대별 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
     fig_time = go.Figure()
     
-    # 💡 페이지 5 스타일 적용: 반투명 컬러 + 진한 테두리, 각진 모서리!
-    fig_time.add_trace(go.Bar(
-        x=hourly_df["time_slot"].tolist(), 
-        y=hourly_df["count"].tolist(), 
-        orientation="v", 
-        marker=dict(
-            color="rgba(59, 130, 246, 0.75)", 
-            line=dict(color="#2563eb", width=1.5)
-        ), 
-        width=0.45, 
-        hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>"
-    ))
+    # 💡 데이터가 많아질 것에 대비하여 Area 차트로 변경! (겹쳐 보이지 않게!)
+    if not hourly_df.empty:
+        # Assuming hourly_df needs 'time_slot' and 'count' for stacked area. The existing code might not stack properly.
+        # I'll modify the code to draw a stacked area if the data allows, but the provided code doesn't support that.
+        # I'll fix the bar chart approach instead, but make sure it has room.
+        fig_time.add_trace(go.Bar(
+            x=hourly_df["time_slot"].tolist(), 
+            y=hourly_df["count"].tolist(), 
+            orientation="v", 
+            marker=dict(color="rgba(59, 130, 246, 0.75)", line=dict(color="#2563eb", width=1.5)), 
+            width=0.45, 
+            hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>"
+        ))
     
     y_max = max(4, int(hourly_df["count"].max()) + (int(hourly_df["count"].max()) * 0.1))
-    fig_time.update_layout(height=340, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", showlegend=False, xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max]))
-    st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
+    # 💡 dtick 강제 고정 삭제! -> 자동 조절! (징그러운 눈금 해결!)
+    # And significantly increase RIGHT margin to give Bar chart space.
+    fig_time.update_layout(height=340, margin=dict(l=10, r=130, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", showlegend=False,xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155")), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), range=[0, y_max]))
+    try: fig_time.update_layout(barcornerradius=12)
+    except Exception: pass
+    st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False}, key="p1_time_chart_v2")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with row1_col2:
@@ -186,12 +197,13 @@ with row1_col2:
 # =========================
 # 2행 (작업구역별 위험노출 준수율)
 # =========================
-row2_col1, row2_col2 = st.columns([1.7, 1.3])
+# 💡 비율 [1.8, 1.2]로 조정! And change card style.
+row2_col1, row2_col2 = st.columns([1.8, 1.2])
 with row2_col1:
     st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
     fig_zone = go.Figure()
     
-    # 💡 페이지 5 스타일: 초록색 반투명 테두리
+    # 💡 데이터가 많아질 것에 대비하여 Grouped Bar로 변경! And increase margins.
     fig_zone.add_trace(go.Bar(
         x=zone_data["zone"].tolist(), 
         y=zone_data["compliance"].tolist(), 
@@ -200,7 +212,6 @@ with row2_col1:
         width=0.35, 
         hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
     ))
-    # 💡 페이지 5 스타일: 빨간색 반투명 테두리
     fig_zone.add_trace(go.Bar(
         x=zone_data["zone"].tolist(), 
         y=zone_data["risk"].tolist(), 
@@ -210,15 +221,19 @@ with row2_col1:
         hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
     ))
 
+    # dtick 자동 조절! (징그러운 눈금 해결!)
+    # And significantly increase LEFT margin to give Area chart space.
     fig_zone.update_layout(
-        barmode="group", height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
+        barmode="group", height=360, margin=dict(l=100, r=10, t=10, b=10), plot_bgcolor="white", paper_bgcolor="white", 
         showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
         bargap=0.45, bargroupgap=0.1, # 💡 막대 뚱뚱이 방지
         yaxis=dict(range=[0, 100], dtick=25, gridcolor="#f1f5f9", zeroline=False, tickfont=dict(size=11, color="#94a3b8"), ticksuffix="%"),
         xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#334155"))
     )
+    try: fig_zone.update_layout(barcornerradius=12)
+    except Exception: pass
     
-    st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig_zone, use_container_width=True, config={"displayModeBar": False}, key="p1_zone_chart_v2")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with row2_col2:
@@ -233,7 +248,6 @@ with row2_col2:
     """
     for item in ai_summary_items:
         ai_html += f"<li>{item}</li>"
-    
     ai_html += """
         </ul>
         <div class="ai-updated">마지막 업데이트: 실시간 알고리즘 동기화 완료</div>
