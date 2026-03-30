@@ -1,17 +1,18 @@
+import streamlit as st
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import sys
 import os
 
-# 💡 [핵심 해결책] Streamlit Cloud 환경을 위해 부모 폴더(루트)를 경로에 강제 추가!
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-if parent_dir not in sys.path:
-    sys.path.append(parent_dir)
+# 💡 [필살기] Streamlit Cloud 폴더 인식 에러 완벽 차단!
+# 무조건 최우선순위(0번)로 부모 폴더(루트)를 경로에 강제 주입합니다.
+root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if root_path not in sys.path:
+    sys.path.insert(0, root_path)
 
-import logic # 이제 무조건 찾을 수 있음!
-
+import logic # 이제 무조건 찾음!
 
 # --- 공통 UI 스타일링 ---
 def apply_toss_style(fig):
@@ -39,27 +40,39 @@ st.markdown("필터 조건에 따른 상세 위반 패턴을 분석합니다.")
 # 1. 전체 데이터 불러오기
 df = load_data()
 
-# 2. 상단 필터부 (UI)
+# 2. 상단 필터부 (UI) - 위험 여부 필터 추가!
 with st.expander("필터 설정", expanded=True):
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1: start_date = st.date_input("시작일", datetime.today() - timedelta(days=7))
     with col2: end_date = st.date_input("종료일", datetime.today())
     with col3: 
-        zone_list = ["전체"] + list(df['zone'].dropna().unique()) if not df.empty and 'zone' in df.columns else ["전체", "A구역", "B구역"]
+        zone_list = ["전체"] + list(df['zone'].dropna().unique()) if not df.empty and 'zone' in df.columns else ["전체"]
         zone_filter = st.selectbox("구역", zone_list)
     with col4: 
-        ppe_list = ["전체"] + list(df['missed_ppe'].dropna().unique()) if not df.empty and 'missed_ppe' in df.columns else ["전체", "안전모", "안전조끼"]
+        ppe_list = ["전체"] + list(df['missed_ppe'].dropna().unique()) if not df.empty and 'missed_ppe' in df.columns else ["전체"]
         ppe_filter = st.selectbox("PPE 종류", ppe_list)
+    with col5:
+        # 💡 위험 여부 필터 추가
+        risk_filter = st.selectbox("위험 여부", ["전체", "위험(미착용)", "정상(착용)"])
 
-# 3. 로직 함수로 데이터 필터링 및 차트 데이터 생성
+# 3. 로직 함수로 데이터 필터링 (선택한 필터 조건 싹 다 전달)
+if risk_filter == "위험(미착용)":
+    risk_val = "O"
+elif risk_filter == "정상(착용)":
+    risk_val = "X"
+else:
+    risk_val = None
+
 filtered_df = logic.filter_input_data(
     df, 
     start_date=start_date.strftime("%Y-%m-%d"), 
     end_date=end_date.strftime("%Y-%m-%d"), 
     zone=None if zone_filter == "전체" else zone_filter,
-    ppe_type=None if ppe_filter == "전체" else ppe_filter
+    ppe_type=None if ppe_filter == "전체" else ppe_filter,
+    risk_exposure=risk_val # 💡 여기서 그래프를 변신시킴!
 )
 
+# 필터링된 데이터로 차트 뼈대 생성
 charts_data = logic.get_analysis_charts(filtered_df)
 
 # 4. 차트 그리기
@@ -98,10 +111,10 @@ with col3:
         st.plotly_chart(apply_toss_style(fig_zone), use_container_width=True)
     else: st.warning("데이터가 없습니다.")
 
-# [차트 4] 팀별 위반 횟수
+# [차트 4] 팀별/작업유형별 위반 횟수
 with col4:
     chart_key = "team_chart" if "team_chart" in charts_data else "work_type_chart"
-    title_text = "👥 팀별 위반 횟수" if chart_key == "team_chart" else "🔄 작업유형별 위반 횟수"
+    title_text = "👥 팀별 분석" if chart_key == "team_chart" else "🔄 작업유형별 분석"
     
     st.subheader(title_text)
     df_extra = pd.DataFrame(charts_data.get(chart_key, []))
