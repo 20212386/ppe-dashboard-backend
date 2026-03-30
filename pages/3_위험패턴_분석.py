@@ -121,10 +121,11 @@ if run_analysis:
 analysis_data = st.session_state["p3_analysis_data"]
 
 if analysis_data:
-    count = analysis_data.get("count", 0)
-    kpis = analysis_data.get("kpis", {})
-    charts = analysis_data.get("charts", {})
-    recommend_action = analysis_data.get("recommend_action", "추천 조치가 없습니다.")
+    # 💡 [핵심] 백엔드가 null(None)을 던져도 에러 안 나게 강제로 기본값 세팅!
+    count = analysis_data.get("count") or 0
+    kpis = analysis_data.get("kpis") or {}
+    charts = analysis_data.get("charts") or {}
+    recommend_action = analysis_data.get("recommend_action") or "추천 조치가 없습니다."
 else:
     count, kpis, charts, recommend_action = 0, {}, {}, "필터를 설정한 뒤 '분석 실행' 버튼을 눌러주세요."
 
