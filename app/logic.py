@@ -211,10 +211,9 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
             total = len(group)
             viol = int((group["is_violated"] == 1).sum())
             
-            # 💡 [핵심 수술] 1페이지와 똑같이 최소 분모 10명 보정 적용!
+            # 💡 [핵심 수술] 최소 분모 10명 보정 적용!
             smoothed_total = max(total, 10)
             
-            # total이 0일 때(데이터가 아예 없을 때)는 100%가 아니라 깔끔하게 0.0%로 처리!
             if total > 0:
                 r_rate = round((viol / smoothed_total) * 100, 1)
                 c_rate = round(100.0 - r_rate, 1)
@@ -231,6 +230,8 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
     else:
         zone_chart = [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats]
 
+    # 🚨 [가장 중요한 부분] 이 줄이 없어서 차트가 0으로 죽어버렸던 겁니다!! 🚨
+    return {"time_chart": time_chart, "ppe_chart": ppe_chart, "zone_chart": zone_chart, "task_chart": task_chart}
 
 def get_recommend_action(df: pd.DataFrame) -> str:
     if df.empty: return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 점검을 유지하세요."
