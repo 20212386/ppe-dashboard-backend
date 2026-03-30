@@ -36,24 +36,25 @@ def build_ai_summary(report_date, weakest_zone_name, weakest_zone_score, most_mi
     items.append("<b>[예측 조치]</b> 취약 시간대 순찰 빈도를 상향하고 맞춤형 교육을 진행할 경우 위험도를 유의미하게 낮출 수 있습니다.")
     return items
 
+# 💡 [핵심] 상단(제목+아이콘)과 하단(값+뱃지)으로 HTML 구조를 나눴습니다!
 def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, icon_bg, icon_fg, icon_symbol):
     st.markdown(
         f"""
         <div class="metric-card" style="border-left: 6px solid {accent};">
-            <div class="metric-top">
-                <div class="metric-left">
-                    <div class="metric-title">{title}</div>
-                    <div class="metric-value">{value}</div>
-                    <div class="metric-badge" style="background:{badge_bg}; color:{badge_fg};">{badge_text}</div>
-                </div>
+            <div class="metric-header">
+                <div class="metric-title">{title}</div>
                 <div class="metric-icon" style="background:{icon_bg}; color:{icon_fg};">{icon_symbol}</div>
+            </div>
+            <div class="metric-body">
+                <div class="metric-value">{value}</div>
+                <div class="metric-badge" style="background:{badge_bg}; color:{badge_fg};">{badge_text}</div>
             </div>
         </div>
         """, unsafe_allow_html=True
     )
 
 # =========================
-# 스타일 
+# 스타일 (Toss/Apple 감성 + 칼각 정렬 CSS)
 # =========================
 st.markdown("""
 <style>
@@ -63,13 +64,23 @@ st.markdown("""
 .section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
 .section-title { font-size: 1.16rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem; }
 .section-sub { color: #64748b; font-size: 0.88rem; margin-bottom: 1.2rem; }
-.metric-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 18px 20px; min-height: 158px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
-.metric-top { display: flex; justify-content: space-between; gap: 10px; }
-.metric-left { flex: 1; }
-.metric-title { color: #64748b; font-size: 0.92rem; font-weight: 700; margin-bottom: 10px; }
-.metric-value { color: #0f172a; font-size: 1.72rem; font-weight: 800; margin-bottom: 10px; }
-.metric-badge { display: inline-block; padding: 7px 11px; border-radius: 999px; font-size: 0.76rem; font-weight: 800; }
-.metric-icon { width: 52px; height: 52px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.28rem; }
+
+/* 💡 [핵심] 카드 높이를 190px로 고정하고 양끝 정렬(space-between) 적용 */
+.metric-card { 
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; 
+    padding: 20px; height: 195px; 
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 0.8rem;
+    display: flex; flex-direction: column; justify-content: space-between; 
+}
+.metric-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.metric-title { color: #64748b; font-size: 0.95rem; font-weight: 700; line-height: 1.4; word-break: keep-all; }
+.metric-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+.metric-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+
+/* 💡 [핵심] 폰트 크기 살짝 줄이고 단어 안 끊어지게 (keep-all) 설정 */
+.metric-value { color: #0f172a; font-size: 1.5rem; font-weight: 800; line-height: 1.3; word-break: keep-all; }
+.metric-badge { display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 800; }
+
 .insight-box { border-radius: 16px; padding: 16px 18px; margin-top: 0.5rem; font-size: 0.92rem; font-weight: 700; border: 1px solid; line-height: 1.6; }
 .ai-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 0.25rem; }
 .ai-emoji { font-size: 1.4rem; }
@@ -140,13 +151,10 @@ with row1_col1:
     st.markdown('<div class="section-card"><div class="section-title">시간대별 PPE 이탈 건수</div><div class="section-sub">시간대별 위반 분포를 확인합니다</div>', unsafe_allow_html=True)
     fig_time = go.Figure()
     
-    # 💡 text 관련 속성 싹 다 날림! hovertemplate으로 마우스 올렸을 때만 보이게!
     fig_time.add_trace(go.Bar(
-        x=hourly_df["time_slot"].tolist(), 
-        y=hourly_df["count"].tolist(), 
+        x=hourly_df["time_slot"].tolist(), y=hourly_df["count"].tolist(), 
         marker=dict(color="#3b82f6", line=dict(color="#2563eb", width=1.0)), 
-        width=0.4,
-        hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>"
+        width=0.4, hovertemplate="시간대: %{x}<br>건수: %{y}건<extra></extra>"
     ))
     
     y_max = max(4, int(hourly_df["count"].max()) * 1.3)
@@ -168,22 +176,15 @@ with row2_col1:
     st.markdown('<div class="section-card"><div class="section-title">특정별 위험노출 준수율</div><div class="section-sub">구역별 준수율과 위험도를 100% 기준으로 비교합니다</div>', unsafe_allow_html=True)
     fig_zone = go.Figure()
     
-    # 💡 text 관련 속성 싹 다 날림! hovertemplate 추가!
     fig_zone.add_trace(go.Bar(
-        x=zone_data["zone"].tolist(), 
-        y=zone_data["compliance"].tolist(), 
-        name="준수율 %", 
-        marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)), 
-        width=0.35,
-        hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
+        x=zone_data["zone"].tolist(), y=zone_data["compliance"].tolist(), 
+        name="준수율 %", marker=dict(color="#22c55e", line=dict(color="#16a34a", width=1.0)), 
+        width=0.35, hovertemplate="구역: %{x}<br>준수율: %{y}%<extra></extra>"
     ))
     fig_zone.add_trace(go.Bar(
-        x=zone_data["zone"].tolist(), 
-        y=zone_data["risk"].tolist(), 
-        name="위험도 %", 
-        marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)), 
-        width=0.35,
-        hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
+        x=zone_data["zone"].tolist(), y=zone_data["risk"].tolist(), 
+        name="위험도 %", marker=dict(color="#ef4444", line=dict(color="#dc2626", width=1.0)), 
+        width=0.35, hovertemplate="구역: %{x}<br>위험도: %{y}%<extra></extra>"
     ))
 
     fig_zone.update_layout(

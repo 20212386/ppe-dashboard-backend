@@ -29,11 +29,19 @@ def get_zone_risk_scores(df: pd.DataFrame) -> list[dict]:
     work_df = df.copy()
     work_df["zone"] = work_df["zone"].astype(str).str.strip()
     results = []
+    
     for zone in work_df["zone"].dropna().unique():
         zone_df = work_df[work_df["zone"] == zone]
         zone_total = len(zone_df)
-        risk_score = 0.0 if zone_total == 0 else round(((zone_df["is_violated"] == 1).sum() / zone_total) * 100, 2)
+        violation_count = (zone_df["is_violated"] == 1).sum()
+        
+        # 💡 [핵심 수술 완료] 분모 통일 (최소 10명 보정)
+        # 구역에 사람이 1~2명뿐이어도 무조건 최소 10명으로 나눠서 100%로 튀는 걸 막습니다!
+        smoothed_total = max(zone_total, 10)
+        
+        risk_score = 0.0 if zone_total == 0 else round((violation_count / smoothed_total) * 100, 2)
         results.append({"zone": zone, "risk_score": min(100.0, risk_score)})
+        
     results.sort(key=lambda x: x["risk_score"], reverse=True)
     return results
 
@@ -178,12 +186,7 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
     tk_cats = ["고소작업", "절단작업", "자재운반", "설비점검"]
 
     if df.empty:
-        return {
-            "time_chart": [{"label": c, "count": 0} for c in t_cats],
-            "ppe_chart": [{"label": c, "count": 0} for c in p_cats],
-            "zone_chart": [{"label": c, "count": 0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats],
-            "task_chart": [{"label": c, "count": 0} for c in tk_cats]
-        }
+        return {"time_chart": [{"label": c, "count": 0} for c in t_cats], "ppe_chart": [{"label": c, "count": 0} for c in p_cats], "zone_chart": [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats], "task_chart": [{"label": c, "count": 0} for c in tk_cats]}
 
     t_counts = df["time_slot"].replace("", pd.NA).dropna().value_counts() if "time_slot" in df.columns else {}
     time_chart = [{"label": c, "count": int(t_counts.get(c, 0))} for c in t_cats]
@@ -194,7 +197,6 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
     tk_counts = df["task_type"].replace("", pd.NA).dropna().value_counts() if "task_type" in df.columns else {}
     task_chart = [{"label": c, "count": int(tk_counts.get(c, 0))} for c in tk_cats]
 
-    # 💡 [핵심] 빈칸 고정도 유지하면서, 프론트엔드가 요구하는 초록색/빨간색 % 데이터를 정확히 보냅니다!
     zone_chart = []
     if "zone" in df.columns and "is_violated" in df.columns:
         temp_z = df.copy()
@@ -203,25 +205,12 @@ def get_analysis_charts(df: pd.DataFrame) -> dict:
             group = temp_z[temp_z["zone"] == z]
             total = len(group)
             viol = int((group["is_violated"] == 1).sum())
-            
             r_rate = round((viol / total) * 100, 1) if total > 0 else 0.0
-            c_rate = round(100.0 - r_rate, 1) if total > 0 else 0.0
-            
-            zone_chart.append({
-                "label": z, 
-                "count": viol, 
-                "compliance_rate": c_rate, 
-                "risk_rate": r_rate
-            })
+            zone_chart.append({"label": z, "count": viol, "compliance_rate": round(100.0 - r_rate, 1) if total > 0 else 0.0, "risk_rate": r_rate})
     else:
-        zone_chart = [{"label": c, "count": 0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats]
+        zone_chart = [{"label": c, "count": 0.0, "compliance_rate": 0.0, "risk_rate": 0.0} for c in z_cats]
 
-    return {
-        "time_chart": time_chart,
-        "ppe_chart": ppe_chart,
-        "zone_chart": zone_chart,
-        "task_chart": task_chart,
-    }
+    return {"time_chart": time_chart, "ppe_chart": ppe_chart, "zone_chart": zone_chart, "task_chart": task_chart}
 
 def get_recommend_action(df: pd.DataFrame) -> str:
     if df.empty: return "현재 필터 조건에서 뚜렷한 위반 패턴이 없어 기본 점검을 유지하세요."
