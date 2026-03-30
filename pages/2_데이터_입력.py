@@ -286,33 +286,29 @@ with left:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">수기 데이터 입력</div>', unsafe_allow_html=True)
 
+    # 💡 2칸씩 4줄로 깔끔하게 그룹핑!
     c1, c2 = st.columns(2)
     c3, c4 = st.columns(2)
     c5, c6 = st.columns(2)
     c7, c8 = st.columns(2)
 
-    with c1:
-        manual_date = st.date_input("날짜")
-    with c2:
-        manual_time_slot = st.selectbox("시간대", ["오전", "점심직후", "오후"])
+    # 1. 언제 (시간)
+    with c1: manual_date = st.date_input("날짜")
+    with c2: manual_time_slot = st.selectbox("시간대", ["오전", "점심직후", "오후"])
 
-    with c3:
-        manual_site = st.selectbox("현장", ["현장1", "현장2", "현장3"])
-    with c4:
-        manual_team = st.selectbox("팀", ["A팀", "B팀", "C팀", "D팀"])
+    # 2. 어디서 (장소)
+    with c3: manual_site = st.selectbox("현장", ["현장1", "현장2", "현장3"])
+    with c4: manual_zone = st.selectbox("작업구역", ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"])
 
-    with c5:
-        manual_zone = st.selectbox("작업구역", ["고소작업구역", "절단작업구역", "자재운반구역", "설비점검구역"])
-    with c6:
-        manual_task_type = st.selectbox("작업유형", ["고소작업", "절단작업", "자재운반", "설비점검"])
+    # 3. 누가 (사람) - 💡 팀과 작업자 ID를 나란히 배치!
+    with c5: manual_team = st.selectbox("팀", ["A팀", "B팀", "C팀", "D팀"])
+    with c6: dummy_worker_id = st.text_input("작업자 ID", placeholder="예 : W-1234")
 
-    with c7:
-        manual_missed_ppe = st.selectbox("누락 PPE", ["정상 착용", "장갑", "안전모", "랜야드"])
-    with c8:
-        # 💡 [핵심] 여기에 아이디 껍데기를 추가했습니다! 기능은 없고 간지만 납니다.
-        dummy_worker_id = st.text_input("작업자 ID", placeholder="예 : W-1234")
+    # 4. 뭘 했나 (작업 및 위반)
+    with c7: manual_task_type = st.selectbox("작업유형", ["고소작업", "절단작업", "자재운반", "설비점검"])
+    with c8: manual_missed_ppe = st.selectbox("누락 PPE", ["정상 착용", "장갑", "안전모", "랜야드"])
 
-    # 💡 [핵심] 비고 칸을 밖으로 빼서 전체 가로 너비를 꽉 채우게 만들었습니다!
+    # 5. 비고 (전체 너비)
     manual_note = st.text_input("비고", placeholder="추가 메모 입력")
 
     if st.button("수기 입력 저장", use_container_width=True):
