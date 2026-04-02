@@ -13,25 +13,25 @@ API_BASE = "https://ppe-dashboard-backend.onrender.com"
 st.markdown("""
 <style>
 .block-container {
-    padding-top: 2.2rem;
+    padding-top: 3.4rem;
     padding-bottom: 2rem;
     max-width: 1500px;
 }
 
 .main-title {
-    font-size: 1.95rem;
+    font-size: 1.9rem;
     font-weight: 800;
     color: #0f172a;
-    line-height: 1.15;
+    line-height: 1.12;
     letter-spacing: -0.025em;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.38rem;
     word-break: keep-all;
 }
 
 .sub-title {
-    font-size: 0.96rem;
+    font-size: 0.95rem;
     color: #64748b;
-    margin-bottom: 1.15rem;
+    margin-bottom: 1.1rem;
     line-height: 1.45;
 }
 .filter-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
