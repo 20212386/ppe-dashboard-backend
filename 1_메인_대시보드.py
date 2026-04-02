@@ -58,9 +58,28 @@ def render_metric_card(title, value, badge_text, accent, badge_bg, badge_fg, ico
 # =========================
 st.markdown("""
 <style>
-.block-container { padding-top: 1.7rem; padding-bottom: 2rem; max-width: 1500px; }
-.main-title { font-size: 2.15rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
-.main-subtitle { font-size: 0.98rem; color: #64748b; margin-bottom: 1.1rem; }
+.block-container {
+    padding-top: 3.2rem;
+    padding-bottom: 2rem;
+    max-width: 1500px;
+}
+
+.main-title {
+    font-size: 2.9rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.45rem;
+    line-height: 1.18;
+    letter-spacing: -0.03em;
+    word-break: keep-all;
+}
+
+.main-subtitle {
+    font-size: 1.02rem;
+    color: #64748b;
+    margin-bottom: 1.4rem;
+    line-height: 1.5;
+}
 .section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
 .section-title { font-size: 1.16rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem; }
 .section-sub { color: #64748b; font-size: 0.88rem; margin-bottom: 1.2rem; }
