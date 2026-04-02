@@ -12,9 +12,28 @@ API_BASE = "https://ppe-dashboard-backend.onrender.com"
 # =========================
 st.markdown("""
 <style>
-.block-container { padding-top: 1.7rem; padding-bottom: 2rem; max-width: 1500px; }
-.main-title { font-size: 2.15rem; font-weight: 800; color: #0f172a; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
-.sub-title { font-size: 0.98rem; color: #64748b; margin-bottom: 1.1rem; }
+.block-container {
+    padding-top: 3.2rem;
+    padding-bottom: 2rem;
+    max-width: 1500px;
+}
+
+.main-title {
+    font-size: 2.9rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.18;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.45rem;
+    word-break: keep-all;
+}
+
+.sub-title {
+    font-size: 1.02rem;
+    color: #64748b;
+    margin-bottom: 1.35rem;
+    line-height: 1.5;
+}
 .filter-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; }
 .section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 22px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); margin-bottom: 1rem; height: 100%; }
 .section-title { font-size: 1.16rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem; }
